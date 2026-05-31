@@ -3,6 +3,7 @@
 Reference: Victron "VE.Direct Protocol" + "BlueSolar-HEX-protocol" PDFs.
 Validated against a SmartSolar MPPT 75/15 (PID 0xA075, FW 1.74).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,18 +14,28 @@ CMD_ASYNC = 0xA  # device-initiated; same response shape as Get
 
 
 def checksum(body: bytes) -> int:
-    """HEX frame checksum byte.
+    """Return the HEX frame checksum byte for ``body`` (command byte + payload).
 
-    The sum of the command byte + all payload bytes + the checksum byte must
-    equal 0x55 (mod 256). ``body`` is command byte + payload bytes.
+    The frame is valid when ``(sum(command + payload) + checksum) % 256 == 0x55``.
+
+    >>> hex(checksum(bytes((0x07, 0x00, 0x01, 0x00))))  # Get register 0x0100
+    '0x4d'
+    >>> (sum((0x07, 0x00, 0x01, 0x00)) + checksum(bytes((0x07, 0x00, 0x01, 0x00)))) % 256
+    85
     """
     return (0x55 - sum(body)) & 0xFF
 
 
 def build_get(register: int) -> bytes:
-    """Build a Get command frame for a 16-bit register (read-only).
+    """Build a read-only Get command frame for a 16-bit ``register``.
 
-    Example: register 0x0100 -> b':70001004D\\n'
+    The register is encoded little-endian and the command nibble is a single
+    char on the wire (``7``).
+
+    >>> build_get(0x0100)        # product id
+    b':70001004D\\n'
+    >>> build_get(0xEDA8)        # documented example
+    b':7A8ED00B9\\n'
     """
     lo, hi = register & 0xFF, (register >> 8) & 0xFF
     body = bytes((CMD_GET, lo, hi, 0x00))  # cmd, reg LE, flags=0x00
@@ -46,15 +57,21 @@ class HexResponse:
 
     @property
     def empty(self) -> bool:
-        """flags 0x04 = register has no data (e.g. empty history slot)."""
+        """Flags 0x04 = register has no data (e.g. empty history slot)."""
         return self.flags == 0x04
 
 
 def parse_frame(line: bytes) -> HexResponse | None:
-    """Parse one ``:``-prefixed HEX line into a HexResponse.
+    """Parse one ``:``-prefixed HEX line into a :class:`HexResponse`.
 
-    Returns None if the line is not a well-formed Get/Async response or the
-    checksum is invalid. Lines without a leading ':' (i.e. text frames) -> None.
+    Returns ``None`` if the line is not a well-formed Get/Async response or the
+    checksum is invalid. Text frames (no leading ``:``) also return ``None``.
+
+    >>> r = parse_frame(b":70001000075A0FF39")   # response to Get 0x0100
+    >>> r.register == 0x0100, r.ok
+    (True, True)
+    >>> parse_frame(b"PID\\t0xA075") is None       # text frame, not HEX
+    True
     """
     s = line.strip()
     if not s.startswith(b":"):

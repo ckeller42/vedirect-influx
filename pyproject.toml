@@ -18,13 +18,59 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = [
+    "pytest>=7",
+    "pytest-cov>=4",
+    "ruff>=0.6",
+    "mypy>=1.8",
+    "codespell>=2.2",
+    "pip-audit>=2.7",
+    "pre-commit>=3.5",
+    "build>=1.0",
+    "twine>=5.0",
+]
 
 [project.scripts]
 vedirect-influx = "vedirect_influx.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ckeller42/vedirect-influx"
+Repository = "https://github.com/ckeller42/vedirect-influx"
+Issues = "https://github.com/ckeller42/vedirect-influx/issues"
 
 [tool.setuptools.packages.find]
 include = ["vedirect_influx*"]
+
+[tool.pytest.ini_options]
+# importlib mode avoids duplicate-module collisions when --doctest-modules
+# imports the package modules alongside the test modules.
+addopts = "--doctest-modules --import-mode=importlib"
+testpaths = ["vedirect_influx", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+# E/F=pyflakes+pycodestyle, I=isort, UP=pyupgrade, B=bugbear, D=pydocstyle
+select = ["E", "F", "I", "UP", "B", "D"]
+# D203/D213 conflict with D211/D212; pep257 convention picks the consistent set.
+# D102/D105/D107: don't force docstrings on every method/dunder/__init__ (kept
+# concise per project preference); modules, classes and public functions still required.
+ignore = ["D203", "D213", "D102", "D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]  # tests don't need docstrings
+
+[tool.mypy]
+python_version = "3.10"  # type-check semantics; runtime still supports 3.9
+ignore_missing_imports = true  # pyserial / influxdb_client ship no stubs
+warn_unused_ignores = true
+
+[tool.codespell]
+skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json"
+ignore-words-list = "ot"  # false positive in flux/JSON data and short tokens
+

@@ -1,0 +1,14 @@
+# gitleaks config. Extend the default ruleset and allowlist the test-fixture
+# device serial number (a hardware identifier captured from a real MPPT, not a
+# credential) so it does not trip the secret scanner.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures contain a Victron device serial (not a secret)"
+paths = [
+  '''tests/fixtures/.*''',
+]
+regexes = [
+  '''HQ2521DJPUY''',
+]

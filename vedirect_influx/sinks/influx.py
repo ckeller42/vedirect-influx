@@ -1,4 +1,5 @@
 """InfluxDB v2 sink."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
@@ -10,6 +11,8 @@ from .base import Sink
 
 
 class InfluxDBSink(Sink):
+    """Write live and daily-history points to InfluxDB v2."""
+
     def __init__(
         self,
         url: str,

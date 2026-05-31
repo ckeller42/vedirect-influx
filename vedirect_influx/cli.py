@@ -1,4 +1,5 @@
 """CLI entrypoint: vedirect-influx --config <path>."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,6 +11,7 @@ from .reader import SerialReader
 
 
 def make_sink(cfg: Config):
+    """Construct the configured sink (InfluxDB or stdout)."""
     if cfg.sink_type == "stdout":
         from .sinks.stdout import StdoutSink
 
@@ -33,10 +35,12 @@ def make_sink(cfg: Config):
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Parse args, build the sink, and run the reader (or a one-off history poll)."""
     ap = argparse.ArgumentParser(prog="vedirect-influx")
     ap.add_argument("--config", "-c", help="path to YAML config")
-    ap.add_argument("--history-once", action="store_true",
-                    help="poll history once, print/write, then exit")
+    ap.add_argument(
+        "--history-once", action="store_true", help="poll history once, print/write, then exit"
+    )
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
 

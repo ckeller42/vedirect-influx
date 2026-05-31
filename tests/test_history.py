@@ -1,8 +1,9 @@
 """Calibration tests: decode real captured frames and cross-check vs text H-values."""
+
 import pathlib
 
-from vedirect_influx.protocol import build_get, parse_frame, checksum
-from vedirect_influx.history import decode_daily, history_register, HISTORY_BASE
+from vedirect_influx.history import HISTORY_BASE, decode_daily, history_register
+from vedirect_influx.protocol import build_get, checksum, parse_frame
 
 FIX = pathlib.Path(__file__).parent / "fixtures" / "history_mppt7515.txt"
 

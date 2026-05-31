@@ -1,4 +1,5 @@
 """Configuration loaded from YAML + environment (no secrets in the file)."""
+
 from __future__ import annotations
 
 import os
@@ -9,6 +10,8 @@ import yaml
 
 @dataclass
 class Config:
+    """Runtime configuration (serial, history, and sink settings)."""
+
     port: str = "/dev/victron"
     baud: int = 19200
     live_interval_s: int = 15
@@ -29,7 +32,7 @@ class Config:
         return os.environ.get(self.influx_token_env, "")
 
     @classmethod
-    def load(cls, path: str | None) -> "Config":
+    def load(cls, path: str | None) -> Config:
         data: dict = {}
         if path and os.path.exists(path):
             with open(path) as f:

@@ -4,6 +4,7 @@ A single process must own the serial port. This reader continuously parses the
 device's text stream (live telemetry) and periodically injects HEX Get commands
 to read the on-device daily-history registers (read-only).
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,8 @@ log = logging.getLogger("vedirect_influx")
 
 
 class SerialReader:
+    """Own the VE.Direct serial port; stream live telemetry and poll HEX history."""
+
     def __init__(self, config, sink: Sink) -> None:
         self.cfg = config
         self.sink = sink
@@ -91,7 +94,7 @@ class SerialReader:
     def run(self) -> None:
         while True:
             try:
-                self._open()
+                ser = self._open()
                 if self.cfg.history_enabled and self.cfg.history_poll_on_start:
                     try:
                         self.poll_history()
@@ -99,7 +102,7 @@ class SerialReader:
                         log.exception("startup history poll failed")
                 buf = b""
                 while True:
-                    chunk = self._ser.read(256)
+                    chunk = ser.read(256)
                     if chunk:
                         buf += chunk
                         while b"\n" in buf:

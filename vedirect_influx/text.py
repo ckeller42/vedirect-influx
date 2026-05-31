@@ -4,6 +4,7 @@ The device streams ``label<TAB>value`` lines continuously; a block ends with a
 ``Checksum`` field. Approach follows karioja/vedirect (MIT). We map the common
 MPPT labels to scaled InfluxDB fields.
 """
+
 from __future__ import annotations
 
 # label -> (influx field name, scale). Strings/enums handled separately below.
@@ -25,7 +26,18 @@ NUM_FIELDS = {
 
 
 class TextFrameParser:
-    """Accumulates label/value lines into complete frames."""
+    """Accumulate ``label<TAB>value`` lines into complete, decoded frames.
+
+    Feed raw lines via :meth:`feed_line`; it returns ``None`` until a ``Checksum``
+    line closes the block, then returns the decoded field dict.
+
+    >>> p = TextFrameParser()
+    >>> for line in (b"V\\t13290", b"PPV\\t0", b"H20\\t53", b"LOAD\\tOFF"):
+    ...     _ = p.feed_line(line)
+    >>> frame = p.feed_line(b"Checksum\\t\\x00")
+    >>> round(frame["battery_voltage"], 2), frame["pv_power"], frame["load_on"]
+    (13.29, 0.0, 0)
+    """
 
     def __init__(self) -> None:
         self._fields: dict[str, str] = {}
@@ -35,9 +47,9 @@ class TextFrameParser:
         if b"\t" not in line:
             return None
         try:
-            key, val = line.strip().split(b"\t", 1)
-            key = key.decode(errors="replace")
-            val = val.decode(errors="replace")
+            kb, vb = line.strip().split(b"\t", 1)
+            key = kb.decode(errors="replace")
+            val = vb.decode(errors="replace")
         except ValueError:
             return None
         if key == "Checksum":

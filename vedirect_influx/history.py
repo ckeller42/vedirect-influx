@@ -9,10 +9,11 @@ the decoded values against the text-protocol aggregates (H20/H21/H22/H23):
   - day 0 max power == H21,      day 1 max power == H23
   - day_seq decrements by 1 each day back (matches HSDS)
 """
+
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 HISTORY_BASE = 0x1050  # register for "today"
 HISTORY_DAYS = 30  # device stores up to ~30 daily records
@@ -26,6 +27,13 @@ _OFF_DAYSEQ = 32  # un16
 
 
 def history_register(days_ago: int) -> int:
+    """Return the daily-history register for ``days_ago`` (0 = today).
+
+    >>> history_register(0) == HISTORY_BASE == 0x1050
+    True
+    >>> history_register(9)
+    4185
+    """
     return HISTORY_BASE + days_ago
 
 
@@ -45,7 +53,24 @@ class DailyRecord:
 
 
 def decode_daily(data: bytes, days_ago: int) -> DailyRecord | None:
-    """Decode a daily-history record payload. Returns None if too short."""
+    """Decode a daily-history record payload into a :class:`DailyRecord`.
+
+    ``data`` is the response payload after the flags byte. Returns ``None`` if
+    the record is shorter than expected (e.g. an empty/never-populated slot).
+
+    The day-0 record below was captured from a real MPPT 75/15; its decoded
+    yield (0.53 kWh) matches the text-protocol ``H20`` aggregate, and the max
+    power (179 W) matches ``H21`` — the cross-check that calibrates the offsets.
+
+    >>> raw = bytes.fromhex(
+    ...     "003500000000000000880526050000000000"
+    ...     "a20300000000b300000081008c110900")
+    >>> rec = decode_daily(raw, 0)
+    >>> rec.yield_kwh, rec.max_power_w, rec.day_seq
+    (0.53, 179, 9)
+    >>> decode_daily(b"\\x00\\x00", 0) is None   # too short
+    True
+    """
     if len(data) < _OFF_DAYSEQ + 2:
         return None
     yield_001kwh = struct.unpack_from("<I", data, _OFF_YIELD)[0]

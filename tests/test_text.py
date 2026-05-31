@@ -1,4 +1,5 @@
 """Text-protocol parser tests using the captured text frame."""
+
 from vedirect_influx.text import TextFrameParser
 
 # Real frame captured from the MPPT 75/15 (subset, ending with Checksum).
