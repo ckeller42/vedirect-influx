@@ -1,0 +1,15 @@
+[Unit]
+Description=VE.Direct -> InfluxDB (live telemetry + daily history)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/home/pi/solix-env/bin/vedirect-influx --config /etc/vedirect-influx/config.yaml
+EnvironmentFile=/etc/vedirect-influx/secrets.env
+Restart=always
+RestartSec=10
+User=pi
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

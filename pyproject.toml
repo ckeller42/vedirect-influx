@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vedirect-influx"
+version = "0.1.0"
+description = "Read Victron VE.Direct text + HEX daily-history and ingest into InfluxDB"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "ckeller42" }]
+keywords = ["victron", "ve.direct", "vedirect", "mppt", "solar", "influxdb", "grafana"]
+dependencies = [
+    "pyserial>=3.5",
+    "influxdb-client>=1.36",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+vedirect-influx = "vedirect_influx.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ckeller42/vedirect-influx"
+
+[tool.setuptools.packages.find]
+include = ["vedirect_influx*"]

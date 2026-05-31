@@ -1,0 +1,18 @@
+serial:
+  port: /dev/victron      # udev symlink to the VE.Direct USB adapter
+  baud: 19200
+live_interval_s: 15
+history:
+  enabled: true
+  poll_on_start: true
+  daily_at: "00:05"       # local time to refresh daily history
+sink:
+  type: influxdb          # influxdb | stdout
+  url: http://localhost:8086
+  org: home
+  bucket: victron
+  token_env: INFLUXDB_TOKEN   # token read from this env var (never in the file)
+  live_measurement: victron_mppt
+  history_measurement: victron_history_daily
+  tags:
+    device: mppt-75-15
