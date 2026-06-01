@@ -491,7 +491,7 @@
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_current\")"
         }
       ],
-      "description": "Battery terminal voltage measured by the MPPT. VE.Direct field `V`."
+      "description": "Battery terminal voltage (VE.Direct `V`) and charge current (VE.Direct `I`) over time. Positive current = charging from solar."
     },
     {
       "id": 2,
@@ -653,7 +653,7 @@
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"min_battery_v\")"
         }
       ],
-      "description": "Highest battery voltage seen that day."
+      "description": "Highest and lowest battery voltage recorded that day (daily min/max)."
     }
   ]
 }
