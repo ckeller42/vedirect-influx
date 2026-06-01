@@ -7,6 +7,7 @@
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-2a6db2.svg)](https://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen.svg)](https://pre-commit.com/)
 [![Secret scan: gitleaks](https://img.shields.io/badge/secrets-gitleaks-blue.svg)](https://github.com/gitleaks/gitleaks)
+[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI%20review-ff570a.svg)](https://coderabbit.ai/)
 
 Read **Victron VE.Direct** solar/charger data — both the live **text** stream *and* the
 on-device **daily-history** records (via the read-only **HEX** protocol) — and ingest into
@@ -156,6 +157,20 @@ Authoritative spec: Victron
 [VE.Direct Protocol](https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.34.pdf)
 and
 [BlueSolar HEX protocol](https://www.victronenergy.com/upload/documents/BlueSolar-HEX-protocol.pdf).
+
+## Code review agent (CodeRabbit)
+
+This repo is configured for [CodeRabbit](https://coderabbit.ai/) AI code review via
+[`.coderabbit.yaml`](.coderabbit.yaml). It auto-reviews pull requests (e.g. the Dependabot
+PRs) and posts a summary + inline suggestions, deferring to the repo's own linters.
+
+To enable it on a fork/clone:
+
+1. Go to <https://coderabbit.ai/> and **sign in with GitHub**.
+2. **Install the CodeRabbit GitHub App** and grant it access to this repository
+   (Add Repositories → select `vedirect-influx`).
+3. That's it — `.coderabbit.yaml` is picked up automatically; open a PR to trigger a review.
+   Tweak behaviour in that file (see the [config schema](https://docs.coderabbit.ai/)).
 
 ## Development
 
