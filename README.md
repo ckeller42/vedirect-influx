@@ -7,6 +7,7 @@
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-2a6db2.svg)](https://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen.svg)](https://pre-commit.com/)
 [![Secret scan: gitleaks](https://img.shields.io/badge/secrets-gitleaks-blue.svg)](https://github.com/gitleaks/gitleaks)
+[![Reviewed by CodeRabbit](https://img.shields.io/badge/CodeRabbit-reviewed-ff570a.svg)](https://coderabbit.ai/)
 
 Read **Victron VE.Direct** solar/charger data — both the live **text** stream *and* the
 on-device **daily-history** records (via the read-only **HEX** protocol) — and ingest into
