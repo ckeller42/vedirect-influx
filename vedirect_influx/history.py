@@ -39,6 +39,8 @@ def history_register(days_ago: int) -> int:
 
 @dataclass
 class DailyRecord:
+    """One day's decoded solar-history record."""
+
     days_ago: int
     yield_kwh: float
     max_power_w: int
@@ -53,7 +55,7 @@ class DailyRecord:
 
 
 def decode_daily(data: bytes, days_ago: int) -> DailyRecord | None:
-    """Decode a daily-history record payload into a :class:`DailyRecord`.
+    r"""Decode a daily-history record payload into a :class:`DailyRecord`.
 
     ``data`` is the response payload after the flags byte. Returns ``None`` if
     the record is shorter than expected (e.g. an empty/never-populated slot).

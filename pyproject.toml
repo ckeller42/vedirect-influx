@@ -72,5 +72,5 @@ warn_unused_ignores = true
 
 [tool.codespell]
 skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json"
-ignore-words-list = "ot"  # false positive in flux/JSON data and short tokens
+ignore-words-list = "ot,ser"  # short tokens: flux/JSON data, ser=serial var
 

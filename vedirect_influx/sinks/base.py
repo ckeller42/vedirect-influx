@@ -17,5 +17,5 @@ class Sink(ABC):
     def write_history_day(self, fields: dict, day: date) -> None:
         """Write one daily-history record (timestamped at the day's midnight)."""
 
-    def close(self) -> None:  # pragma: no cover - optional
-        pass
+    def close(self) -> None:  # noqa: B027  # optional hook, intentionally not abstract
+        """Release resources, if any (optional; default no-op)."""

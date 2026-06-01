@@ -1,11 +1,132 @@
 name: ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v6
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.12"
+          cache: pip
       - run: pip install -e ".[dev]"
-      - run: pytest -q
+      - run: ruff check .
+      - run: ruff format --check .
+
+  types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]" types-PyYAML
+      - run: mypy vedirect_influx
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -q --cov=vedirect_influx --cov-report=term-missing
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check dist/*
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install "codespell[toml]"
+      - run: codespell   # config (skip + ignore-words) in pyproject.toml
+      - uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: "**/*.md"
+      - name: Link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress --accept 200,206,429 --max-retries 2
+            --exclude 'victronenergy\.com'
+            --exclude 'pypi\.org/project/vedirect-influx'
+            './**/*.md'
+          fail: true
+
+  yaml-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install yamllint
+      - run: yamllint -c .yamllint.yaml .
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          flags: "-ignore \"the runner of .+ action is too old\""
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install pip-audit
+      - run: pip-audit

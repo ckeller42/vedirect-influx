@@ -26,15 +26,16 @@ NUM_FIELDS = {
 
 
 class TextFrameParser:
-    """Accumulate ``label<TAB>value`` lines into complete, decoded frames.
+    r"""Accumulate ``label<TAB>value`` lines into complete, decoded frames.
 
     Feed raw lines via :meth:`feed_line`; it returns ``None`` until a ``Checksum``
     line closes the block, then returns the decoded field dict.
 
     >>> p = TextFrameParser()
-    >>> for line in (b"V\\t13290", b"PPV\\t0", b"H20\\t53", b"LOAD\\tOFF"):
-    ...     _ = p.feed_line(line)
-    >>> frame = p.feed_line(b"Checksum\\t\\x00")
+    >>> labels = [("V", "13290"), ("PPV", "0"), ("H20", "53"), ("LOAD", "OFF")]
+    >>> for k, v in labels:
+    ...     _ = p.feed_line(k.encode() + b"\t" + v.encode())
+    >>> frame = p.feed_line(b"Checksum\t\x00")
     >>> round(frame["battery_voltage"], 2), frame["pv_power"], frame["load_on"]
     (13.29, 0.0, 0)
     """

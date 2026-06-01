@@ -27,15 +27,15 @@ def checksum(body: bytes) -> int:
 
 
 def build_get(register: int) -> bytes:
-    """Build a read-only Get command frame for a 16-bit ``register``.
+    r"""Build a read-only Get command frame for a 16-bit ``register``.
 
     The register is encoded little-endian and the command nibble is a single
     char on the wire (``7``).
 
     >>> build_get(0x0100)        # product id
-    b':70001004D\\n'
+    b':70001004D\n'
     >>> build_get(0xEDA8)        # documented example
-    b':7A8ED00B9\\n'
+    b':7A8ED00B9\n'
     """
     lo, hi = register & 0xFF, (register >> 8) & 0xFF
     body = bytes((CMD_GET, lo, hi, 0x00))  # cmd, reg LE, flags=0x00
@@ -62,7 +62,7 @@ class HexResponse:
 
 
 def parse_frame(line: bytes) -> HexResponse | None:
-    """Parse one ``:``-prefixed HEX line into a :class:`HexResponse`.
+    r"""Parse one ``:``-prefixed HEX line into a :class:`HexResponse`.
 
     Returns ``None`` if the line is not a well-formed Get/Async response or the
     checksum is invalid. Text frames (no leading ``:``) also return ``None``.
