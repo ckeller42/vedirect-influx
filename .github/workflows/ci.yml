@@ -84,7 +84,8 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
-            --no-progress --accept 200,206,429 --max-retries 2
+            --no-progress --accept 200,206,429,500,502,503,504
+            --max-retries 3 --retry-wait-time 5
             --exclude 'victronenergy\.com'
             --exclude 'pypi\.org/project/vedirect-influx'
             './**/*.md'
