@@ -3,7 +3,12 @@
 This is what makes the device appear **live** in the VictronConnect app's VRM tab
 ("two-way communication"), complementing the historical ``log.php`` upload
 (:class:`vedirect_influx.sinks.vrm.VrmSink`). It connects to the per-portal VRM
-broker and publishes ``N/<portalID>/solarcharger/<instance>/<D-Bus path>`` topics.
+broker and publishes ``N/<portalID>/<service>/<instance>/<D-Bus path>`` topics.
+
+The app *discovers* a device by sending keepalive requests on ``R/<portalID>/...``
+(e.g. ``R/<id>/system/0/Serial``); the device must answer with a **full publish** of
+its values + a ``full_publish_completed`` marker. This sink caches every value it
+publishes and re-publishes the lot whenever a request arrives.
 
 Requires ``paho-mqtt`` (``pip install "vedirect-influx[mqtt]"``).
 """
@@ -12,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import date
 
 from ..vrm import _build_log_context, broker_for, mqtt_topic, mqtt_username
@@ -49,7 +55,7 @@ def _make_paho_client(client_id: str):
 
 
 class VrmMqttSink(Sink):
-    """Publish live (and today/yesterday) MPPT data to the VRM MQTT broker.
+    """Publish live MPPT data to the VRM MQTT broker and answer keepalive requests.
 
     Pass an explicit ``client`` (and ``connect=False``) for testing; otherwise a
     paho client is built, TLS-pinned to Victron's CCGX CA, authenticated with the
@@ -77,6 +83,7 @@ class VrmMqttSink(Sink):
         self._custom_name = custom_name
         self._firmware = firmware
         self._identified = False
+        self._cache: dict[str, object] = {}  # topic -> value, for full re-publish
         self._client = client or _make_paho_client(mqtt_username(portal_id))
         if connect:
             self._connect(password, broker or broker_for(portal_id), ca_file, verify)
@@ -84,21 +91,41 @@ class VrmMqttSink(Sink):
     def _connect(self, password, broker, ca_file, verify) -> None:
         if not password:
             raise ValueError("VrmMqttSink requires an MQTT password (run vrm-register)")
-        self._client.username_pw_set(mqtt_username(self.portal_id), password)
-        self._client.tls_set_context(_build_log_context(ca_file, verify))
-        self._client.connect(broker, 8883, keepalive=60)
-        self._client.loop_start()
+        c = self._client
+        c.username_pw_set(mqtt_username(self.portal_id), password)
+        c.tls_set_context(_build_log_context(ca_file, verify))
+        c.on_connect = self._on_connect
+        c.on_message = self._on_message
+        c.connect(broker, 8883, keepalive=60)
+        c.loop_start()
         log.info("VRM MQTT connected to %s as %s", broker, mqtt_username(self.portal_id))
 
-    def _topic(self, path: str) -> str:
-        return mqtt_topic(self.portal_id, "solarcharger", self._inst, path)
+    # -- paho callbacks (v2 signatures; extra args tolerated) -----------------
+    def _on_connect(self, client, userdata, flags, reason_code, properties=None) -> None:
+        # subscribe to the app's read/keepalive requests, then announce ourselves
+        client.subscribe(f"R/{self.portal_id}/#")
+        self._publish_identity()
+        self._full_publish()
+
+    def _on_message(self, client, userdata, msg) -> None:
+        if msg.topic.startswith(f"R/{self.portal_id}/"):
+            self._full_publish()
+
+    # -- publishing -----------------------------------------------------------
+    def _publish(self, topic: str, value) -> None:
+        self._cache[topic] = value
+        self._client.publish(topic, json.dumps({"value": value}), qos=0)
 
     def _pub(self, path: str, value) -> None:
-        self._client.publish(self._topic(path), json.dumps({"value": value}), qos=0)
+        self._publish(mqtt_topic(self.portal_id, "solarcharger", self._inst, path), value)
 
     def _publish_identity(self) -> None:
         if self._identified:
             return
+        # the GX "system" service — what the app probes (R/<id>/system/0/Serial)
+        self._publish(mqtt_topic(self.portal_id, "system", 0, "/Serial"), self.portal_id)
+        self._publish(mqtt_topic(self.portal_id, "system", 0, "/Connected"), 1)
+        # the solarcharger device itself
         self._pub("/Mgmt/ProcessName", "vedirect-influx")
         self._pub("/Mgmt/Connection", "VE.Direct")
         self._pub("/ProductId", self._product_id)
@@ -111,6 +138,17 @@ class VrmMqttSink(Sink):
         self._pub("/Serial", self.portal_id)
         self._pub("/Connected", 1)
         self._identified = True
+
+    def _full_publish(self) -> None:
+        """Re-publish everything we know, then signal completion (keepalive reply)."""
+        self._publish_identity()
+        for topic, value in list(self._cache.items()):
+            self._client.publish(topic, json.dumps({"value": value}), qos=0)
+        self._client.publish(
+            f"N/{self.portal_id}/full_publish_completed",
+            json.dumps({"value": int(time.time())}),
+            qos=0,
+        )
 
     def write_live(self, fields: dict, ts=None) -> None:
         self._publish_identity()

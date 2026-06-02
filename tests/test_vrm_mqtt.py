@@ -72,6 +72,38 @@ def test_write_live_skips_unknown_fields():
     assert not any("nonsense" in t for t in topics)
 
 
+def test_publishes_system_serial_for_discovery():
+    # the app probes R/<id>/system/0/Serial; we must publish the system service
+    s, c = make_sink()
+    s.write_live({"battery_voltage": 13.0})
+    assert c.payloads()["N/dca63241ea59/system/0/Serial"] == {"value": "dca63241ea59"}
+
+
+class _Msg:
+    def __init__(self, topic):
+        self.topic = topic
+
+
+def test_keepalive_request_triggers_full_publish():
+    s, c = make_sink()
+    s.write_live({"battery_voltage": 13.49})  # populates the cache
+    before = len(c.published)
+    s._on_message(None, None, _Msg("R/dca63241ea59/system/0/Serial"))
+    after = c.payloads()
+    # cached value re-published and a completion marker emitted
+    assert after["N/dca63241ea59/solarcharger/0/Dc/0/Voltage"] == {"value": 13.49}
+    assert "N/dca63241ea59/full_publish_completed" in after
+    assert len(c.published) > before
+
+
+def test_non_matching_request_ignored():
+    s, c = make_sink()
+    s.write_live({"battery_voltage": 13.0})
+    n = len(c.published)
+    s._on_message(None, None, _Msg("R/someoneelse/system/0/Serial"))
+    assert len(c.published) == n  # not our portal -> ignored
+
+
 def test_close_marks_disconnected():
     s, c = make_sink()
     s.write_live({"battery_voltage": 13.0})
