@@ -23,6 +23,8 @@ Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 
 ![Grafana dashboard](docs/dashboard.png)
 
+<sub>Regenerate this image: `python scripts/screenshot-dashboard.py --url <grafana> --uid <uid> --out docs/dashboard.png` (see script header).</sub>
+
 ## Features
 
 - Live telemetry (battery V/I, PV V/W, charge state, yields, load) → InfluxDB
