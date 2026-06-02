@@ -118,7 +118,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"pv_power\") |> last()"
         }
-      ]
+      ],
+      "description": "Solar power currently harvested by the MPPT. VE.Direct field `PPV`."
     },
     {
       "id": 11,
@@ -163,7 +164,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\") |> last()"
         }
-      ]
+      ],
+      "description": "Battery terminal voltage measured by the MPPT. VE.Direct field `V`."
     },
     {
       "id": 12,
@@ -208,7 +210,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_current\") |> last()"
         }
-      ]
+      ],
+      "description": "Charge current into the battery. Positive = charging from solar, ~0 = idle/float, negative = net draw. VE.Direct field `I`."
     },
     {
       "id": 13,
@@ -253,7 +256,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"yield_today_kwh\") |> last()"
         }
-      ]
+      ],
+      "description": "Energy harvested today. VE.Direct field `H20` (\u00d70.01 kWh)."
     },
     {
       "id": 14,
@@ -316,7 +320,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"charge_state\") |> last()"
         }
-      ]
+      ],
+      "description": "MPPT charge stage code: 0=Off, 3=Bulk, 4=Absorption, 5=Float. VE.Direct field `CS`."
     },
     {
       "id": 15,
@@ -383,7 +388,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"error_code\") |> last()"
         }
-      ]
+      ],
+      "description": "MPPT error code, 0 = no error. VE.Direct field `ERR`."
     },
     {
       "id": 20,
@@ -431,7 +437,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"pv_power\")"
         }
-      ]
+      ],
+      "description": "Solar power currently harvested by the MPPT. VE.Direct field `PPV`."
     },
     {
       "id": 21,
@@ -483,7 +490,8 @@
           "refId": "B",
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_current\")"
         }
-      ]
+      ],
+      "description": "Battery terminal voltage (VE.Direct `V`) and charge current (VE.Direct `I`) over time. Positive current = charging from solar."
     },
     {
       "id": 2,
@@ -543,7 +551,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"yield_kwh\") |> keep(columns:[\"_time\",\"_value\"])"
         }
-      ]
+      ],
+      "description": "Solar energy harvested that day (one point per day at midnight UTC). From HEX history register."
     },
     {
       "id": 31,
@@ -590,7 +599,8 @@
           "refId": "A",
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"max_power_w\") |> keep(columns:[\"_time\",\"_value\"])"
         }
-      ]
+      ],
+      "description": "Peak PV power reached that day."
     },
     {
       "id": 32,
@@ -642,7 +652,8 @@
           "refId": "B",
           "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"min_battery_v\")"
         }
-      ]
+      ],
+      "description": "Highest and lowest battery voltage recorded that day (daily min/max)."
     }
   ]
 }
