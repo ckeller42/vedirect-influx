@@ -136,6 +136,43 @@ PY
 **Check:** `LIVE_FIELDS` is `> 0` (live telemetry is being written). Daily history appears in
 measurement `victron_history_daily` (one point per day at midnight UTC).
 
+## 8. (Optional) Victron VRM Portal — direct upload, no Venus OS
+
+Uploads the same data to [VRM](https://vrm.victronenergy.com) (and the Victron app) *in addition*
+to InfluxDB. See [docs/VRM.md](docs/VRM.md) for how it works and the caveats. Skip if you only
+want Grafana.
+
+```bash
+# register this device with VRM (derives Portal ID from eth0 MAC, stores an auth token)
+sudo "$VENV/bin/vedirect-influx" --config /etc/vedirect-influx/config.yaml vrm-register --test  # ping
+sudo "$VENV/bin/vedirect-influx" --config /etc/vedirect-influx/config.yaml vrm-register         # ANNOUNCE
+```
+
+**Check:** `--test` prints `vrm: OK`; the full register prints the **VRM Portal ID** and claim
+steps. Then, in VRM: *Add installation → by VRM Portal ID →* paste that ID.
+
+Enable the sink (it runs alongside InfluxDB) and restart:
+
+```yaml
+# append to /etc/vedirect-influx/config.yaml
+vrm:
+  enabled: true
+  custom_name: "My MPPT"
+  interval_s: 60
+  auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
+```
+
+```bash
+sudo systemctl restart vedirect-influx
+```
+
+**Check:** in VRM the installation's device list shows your Solar Charger "last seen a few seconds
+ago", and InfluxDB still receives live points (step 7 still passes — the sinks fan out
+independently).
+
+> AI-assisted setup: install the bundled skill (`skills/vedirect-influx/SKILL.md`) for a guided
+> walk-through of these steps.
+
 ## Troubleshooting
 
 - **`/dev/victron` missing** → re-run step 2; confirm the cable is an FTDI VE.Direct adapter.

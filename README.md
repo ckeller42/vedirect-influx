@@ -32,6 +32,7 @@ Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 - Single process owns the serial port and multiplexes text + HEX
 - **Read-only** — never writes charger settings; cannot misconfigure the device
 - Pluggable `Sink` interface (InfluxDB included; stdout for debugging)
+- Optional **Victron VRM Portal** upload — direct, **no Venus OS** ([see below](#victron-vrm-portal-direct-no-venus-os))
 - Config via YAML; secrets via env var (never in the repo)
 - Ships a portable Grafana dashboard ([`deploy/grafana-victron.json`](deploy/grafana-victron.json))
 
@@ -48,10 +49,15 @@ flowchart LR
         H["HEX history poller\nGet 0x1050 + days_ago"]
     end
 
-    R --> S["Sink (abstract)"]
-    S --> I[("InfluxDB\nvictron_mppt\nvictron_history_daily")]
+    R --> M["MultiSink (fan-out)"]
+    M --> I[("InfluxDB\nvictron_mppt\nvictron_history_daily")]
     I --> G["Grafana"]
+    M -. optional .-> V["VrmSink"]
+    V -->|"HTTPS POST log.php"| VRM["VRM Portal\n& Victron app"]
 ```
+
+Sinks implement a small `Sink` interface; `MultiSink` fans each sample out to all of them, so
+VRM uploads run **alongside** InfluxDB and a failure in one never blocks the other.
 
 Daily-history poll (read-only HEX), run on startup and once per day:
 
@@ -144,6 +150,45 @@ sudo systemctl enable --now vedirect-influx
 
 Import [`deploy/grafana-victron.json`](deploy/grafana-victron.json) and select your InfluxDB
 (Flux) datasource when prompted.
+
+## Victron VRM Portal (direct, no Venus OS)
+
+Optionally upload the same data to [VRM](https://vrm.victronenergy.com) and the **Victron app** —
+*in addition* to InfluxDB — without running Venus OS. `vedirect-influx` speaks the same
+`log.php` upload a Venus GX device uses, identifying itself by a **VRM Portal ID** derived from
+the host's ethernet MAC. One-time registration, then claim the installation in VRM:
+
+```mermaid
+sequenceDiagram
+    participant CLI as vedirect-influx vrm-register
+    participant VRM as VRM (ccgxlogging)
+    participant You
+    CLI->>VRM: ANNOUNCE (Portal ID from eth0 MAC + auth token)
+    VRM-->>CLI: vrm: OK  (installation created)
+    CLI-->>You: print Portal ID + claim steps
+    You->>VRM: Add installation → by Portal ID
+    Note over CLI,VRM: then the running service sends SENDDATA every interval
+```
+
+```bash
+vedirect-influx -c config.yaml vrm-register --test   # connectivity ping → "vrm: OK"
+vedirect-influx -c config.yaml vrm-register          # ANNOUNCE + print claim steps
+```
+
+Enable the sink (runs alongside InfluxDB) in `config.yaml`:
+
+```yaml
+vrm:
+  enabled: true
+  custom_name: "My MPPT"
+  interval_s: 60
+  auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
+```
+
+Full protocol, the field→code map, and caveats are in [docs/VRM.md](docs/VRM.md).
+
+> ⚠️ This uses an **undocumented** Victron endpoint and presents as a GX device — intended for
+> personal use with your own hardware. Victron may change it without notice.
 
 ## Related projects & references
 
