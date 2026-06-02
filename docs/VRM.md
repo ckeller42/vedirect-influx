@@ -77,6 +77,23 @@ model only has *today* and *yesterday* daily slots, so deeper history (≥ 2 day
 **only if `history_backfill: true`**, back-dated via `TO` — **experimental**; verify it actually
 lands before relying on it.
 
+## Real-time (live in the VictronConnect app)
+
+The `log.php` upload populates the **VRM Portal website** (dashboard, advanced, device list). The
+**VictronConnect app's VRM tab** is different: it shows devices reachable over the **two-way MQTT
+bridge** ("Zwei-Wege-Kommunikation"). Enable `realtime: true` (and install the `mqtt` extra) to
+publish there too.
+
+How it works: `vrm-register` stores an MQTT password via `storemqttpassword.php` — which only
+succeeds **after** the installation exists (i.e. after `ANNOUNCE`) and is claimed. `VrmMqttSink`
+then connects to the per-portal broker `mqtt<N>.victronenergy.com:8883` (TLS, same CCGX CA) as
+`ccgxapikey_<portalID>` and publishes `N/<portalID>/solarcharger/<instance>/<path>` topics with
+`{"value": …}`, including a one-time identity (`/ProductId`, `/CustomName`, `/Connected` = 1). The
+broker index is `sum(ord(c) for c in portalID) % 128` (see `broker_for`).
+
+It runs as a separate sink fanned out alongside the logger and InfluxDB, so the historical upload
+and Grafana are unaffected. Requires `paho-mqtt` (`pip install "vedirect-influx[mqtt]"`).
+
 ## Configuration reference (`vrm:` section)
 
 | key | default | meaning |
@@ -92,6 +109,8 @@ lands before relying on it.
 | `auth_token_file` | `/etc/vedirect-influx/vrm_auth_token.txt` | generated ownership token |
 | `ca_file` | *(bundled)* | override the CCGX CA bundle path |
 | `history_backfill` | `false` | upload >1-day-old history via `TO` (experimental) |
+| `realtime` | `false` | also publish over the MQTT bridge → live in the app (needs `[mqtt]`) |
+| `mqtt_password_file` | `/etc/vedirect-influx/vrm_mqtt_password.txt` | stored MQTT bridge password |
 
 ## Troubleshooting
 

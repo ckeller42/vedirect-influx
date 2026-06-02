@@ -170,6 +170,24 @@ sudo systemctl restart vedirect-influx
 ago", and InfluxDB still receives live points (step 7 still passes — the sinks fan out
 independently).
 
+**Live in the VictronConnect app (optional):** the device list above is the VRM *website*. To also
+appear in the **app's VRM tab** (real-time MQTT), install the extra and enable `realtime`:
+
+```bash
+sudo "$VENV/bin/pip" install "paho-mqtt>=1.6"
+# vrm-register (step 8) already stored the MQTT password after ANNOUNCE; if you claimed the
+# install only afterwards, re-run vrm-register so storemqttpassword succeeds.
+```
+
+```yaml
+# in the vrm: block
+  realtime: true
+  mqtt_password_file: /etc/vedirect-influx/vrm_mqtt_password.txt
+```
+
+**Check:** after `systemctl restart`, logs show `VRM MQTT connected to mqtt<N>...`; the device
+appears live in VictronConnect → VRM, and VRM's device page flips "two-way communication" on.
+
 > AI-assisted setup: install the bundled skill (`skills/vedirect-influx/SKILL.md`) for a guided
 > walk-through of these steps.
 

@@ -38,6 +38,8 @@ class Config:
     vrm_auth_token_file: str = "/etc/vedirect-influx/vrm_auth_token.txt"
     vrm_ca_file: str = ""  # blank -> bundled ccgx-ca.pem
     vrm_history_backfill: bool = False
+    vrm_realtime: bool = False  # also publish over the VRM MQTT bridge (live in the app)
+    vrm_mqtt_password_file: str = "/etc/vedirect-influx/vrm_mqtt_password.txt"
 
     @property
     def influx_token(self) -> str:
@@ -55,8 +57,17 @@ class Config:
     @property
     def vrm_auth_token(self) -> str:
         """Read the persisted VRM auth token, or '' if not yet registered."""
-        if self.vrm_auth_token_file and os.path.exists(self.vrm_auth_token_file):
-            with open(self.vrm_auth_token_file) as f:
+        return self._read_secret(self.vrm_auth_token_file)
+
+    @property
+    def vrm_mqtt_password(self) -> str:
+        """Read the persisted VRM MQTT bridge password, or '' if not yet registered."""
+        return self._read_secret(self.vrm_mqtt_password_file)
+
+    @staticmethod
+    def _read_secret(path: str) -> str:
+        if path and os.path.exists(path):
+            with open(path) as f:
                 return f.read().strip()
         return ""
 
@@ -96,5 +107,7 @@ class Config:
                 vrm_auth_token_file=vrm.get("auth_token_file", cls.vrm_auth_token_file),
                 vrm_ca_file=vrm.get("ca_file", cls.vrm_ca_file),
                 vrm_history_backfill=vrm.get("history_backfill", cls.vrm_history_backfill),
+                vrm_realtime=vrm.get("realtime", cls.vrm_realtime),
+                vrm_mqtt_password_file=vrm.get("mqtt_password_file", cls.vrm_mqtt_password_file),
             )
         return cls(**data)

@@ -28,3 +28,6 @@ vrm:
   interval_s: 60
   auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
   # history_backfill: false  # experimental: upload >1-day-old history via TO
+  # realtime: false          # also publish over MQTT -> live in the VictronConnect app
+  #                          # (needs `pip install "vedirect-influx[mqtt]"`)
+  # mqtt_password_file: /etc/vedirect-influx/vrm_mqtt_password.txt

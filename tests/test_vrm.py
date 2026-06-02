@@ -77,6 +77,31 @@ def test_client_send_includes_payload_and_token():
     assert "ScV%5B0%5D=12.0" in sent and "VRMAUTHTOKEN=tok" in sent and "c=1" in sent
 
 
+def test_mqtt_username():
+    assert vrm.mqtt_username("dca63241ea59") == "ccgxapikey_dca63241ea59"
+
+
+def test_mqtt_topic_builds_dbus_notification_path():
+    t = vrm.mqtt_topic("abc", "solarcharger", 0, "/Dc/0/Voltage")
+    assert t == "N/abc/solarcharger/0/Dc/0/Voltage"
+    assert vrm.mqtt_topic("abc", "system", 0, "/Serial") == "N/abc/system/0/Serial"
+
+
+def test_store_mqtt_password_success():
+    with mock.patch(
+        "urllib.request.urlopen",
+        return_value=_fake_response(body=b"OK: Password successfully salted, hashed and stored."),
+    ) as uo:
+        assert vrm.store_mqtt_password("abc", "deadbeef", verify=False) is True
+    sent = uo.call_args.args[0].data.decode()
+    assert "identifier=ccgxapikey_abc" in sent and "mqttPassword=deadbeef" in sent
+
+
+def test_store_mqtt_password_failure():
+    with mock.patch("urllib.request.urlopen", return_value=_fake_response(status=500, body=b"err")):
+        assert vrm.store_mqtt_password("abc", "deadbeef", verify=False) is False
+
+
 def test_client_context_tolerates_noncritical_basic_constraints():
     # verifying context clears the strict flag so Victron's old CCGX CA validates
     c = vrm.VrmClient("abc", ca_file=None, verify=True)

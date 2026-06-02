@@ -60,6 +60,15 @@ presents as a GX device — confirm the user is OK with that and is using their 
    InfluxDB still receives points (the sinks fan out independently — one failing never blocks the
    other).
 
+### Live in the VictronConnect app (optional real-time MQTT)
+
+The above shows in the VRM *website*. The **app's VRM tab** needs the real-time MQTT bridge.
+Install the extra (`pip install "vedirect-influx[mqtt]"`), then set `vrm.realtime: true` and
+`mqtt_password_file`. `vrm-register` stores the MQTT password automatically (after `ANNOUNCE`);
+if you claimed the installation only afterwards, re-run `vrm-register` so `storemqttpassword`
+succeeds. Restart and confirm the log line `VRM MQTT connected to mqtt<N>...` and the device
+appearing live in VictronConnect.
+
 ## Notes
 
 - The token file must be writable by the service user; if the service runs as `pi`, keep it under
