@@ -16,3 +16,15 @@ sink:
   history_measurement: victron_history_daily
   tags:
     device: mppt-75-15
+
+# Optional: also upload to the Victron VRM Portal (no Venus OS). Runs alongside the
+# sink above. Register first: `vedirect-influx -c config.yaml vrm-register`. See docs/VRM.md.
+vrm:
+  enabled: false
+  # iface: eth0              # interface whose MAC becomes the VRM Portal ID
+  # portal_id: ""            # set to override the MAC-derived ID
+  custom_name: "My MPPT"
+  product_id: 0xA075         # 0xA075 = SmartSolar MPPT 75/15
+  interval_s: 60
+  auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
+  # history_backfill: false  # experimental: upload >1-day-old history via TO

@@ -41,6 +41,9 @@ Issues = "https://github.com/ckeller42/vedirect-influx/issues"
 [tool.setuptools.packages.find]
 include = ["vedirect_influx*"]
 
+[tool.setuptools.package-data]
+vedirect_influx = ["ccgx-ca.pem"]
+
 [tool.pytest.ini_options]
 # importlib mode avoids duplicate-module collisions when --doctest-modules
 # imports the package modules alongside the test modules.
