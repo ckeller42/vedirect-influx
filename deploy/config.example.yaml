@@ -17,17 +17,22 @@ sink:
   tags:
     device: mppt-75-15
 
-# Optional: also upload to the Victron VRM Portal (no Venus OS). Runs alongside the
-# sink above. Register first: `vedirect-influx -c config.yaml vrm-register`. See docs/VRM.md.
+# Optional: upload to the Victron VRM Portal (no Venus OS), alongside the sink above.
+# There are TWO independent paths, BOTH OFF BY DEFAULT — enable neither, either, or both.
+# Register once first: `vedirect-influx -c config.yaml vrm-register`. See docs/VRM.md.
 vrm:
-  enabled: false
+  # Path 1 — VRM upload over log.php (HTTPS). Feeds the VRM website + VRM app.
+  enabled: false             # << master switch for the log.php upload path
+
+  # Path 2 — real-time MQTT bridge. Pushes live values over MQTT (needs the [mqtt] extra).
+  realtime: false            # << independent switch for the MQTT path
+
+  # --- settings shared by both paths (only used when a path is enabled) ---
   # iface: eth0              # interface whose MAC becomes the VRM Portal ID
   # portal_id: ""            # set to override the MAC-derived ID
   custom_name: "My MPPT"
   product_id: 0xA075         # 0xA075 = SmartSolar MPPT 75/15
   interval_s: 60
-  auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
+  auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt        # path 1 (log.php) token
+  mqtt_password_file: /etc/vedirect-influx/vrm_mqtt_password.txt  # path 2 (MQTT) password
   # history_backfill: false  # experimental: upload >1-day-old history via TO
-  # realtime: false          # also publish over MQTT -> live in the VictronConnect app
-  #                          # (needs `pip install "vedirect-influx[mqtt]"`)
-  # mqtt_password_file: /etc/vedirect-influx/vrm_mqtt_password.txt
