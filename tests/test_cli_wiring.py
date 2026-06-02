@@ -36,3 +36,19 @@ def test_build_sinks_fans_out_to_vrm_when_enabled():
 def test_build_sinks_primary_only_when_vrm_disabled():
     sinks = build_sinks(Config(sink_type="stdout"))
     assert len(sinks) == 1 and isinstance(sinks[0], StdoutSink)
+
+
+def test_both_vrm_paths_off_by_default():
+    cfg = Config()
+    assert cfg.vrm_enabled is False  # log.php path opt-in
+    assert cfg.vrm_realtime is False  # MQTT path opt-in
+
+
+def test_realtime_path_independent_of_log_path(monkeypatch):
+    # MQTT path can be enabled without the log.php path (and vice-versa)
+    import vedirect_influx.cli as cli
+
+    cfg = Config(sink_type="stdout", vrm_enabled=False, vrm_realtime=True)
+    monkeypatch.setattr(cli, "make_vrm_mqtt_sink", lambda c: StdoutSink())
+    kinds = [type(s).__name__ for s in build_sinks(cfg)]
+    assert kinds.count("StdoutSink") == 2  # primary + (stubbed) mqtt, no log.php VrmSink

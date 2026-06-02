@@ -18,6 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mqtt = ["paho-mqtt>=1.6"]   # real-time VRM (live in the VictronConnect app)
 dev = [
     "pytest>=7",
     "pytest-cov>=4",

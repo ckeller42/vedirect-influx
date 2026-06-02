@@ -12,6 +12,8 @@ from .reader import SerialReader
 from .sinks.base import Sink
 from .sinks.multi import MultiSink
 
+log = logging.getLogger("vedirect_influx")
+
 #: Reported to VRM in the ANNOUNCE (mirrors Venus' vrmlogger version field).
 SOFTWARE_VERSION = "vedirect-influx"
 
@@ -62,7 +64,42 @@ def build_sinks(cfg: Config) -> list[Sink]:
         sys.exit(f"unknown sink type: {cfg.sink_type}")
     if cfg.vrm_enabled:
         sinks.append(make_vrm_sink(cfg))
+    if cfg.vrm_realtime:
+        mqtt_sink = make_vrm_mqtt_sink(cfg)
+        if mqtt_sink is not None:
+            sinks.append(mqtt_sink)
     return sinks
+
+
+def make_vrm_mqtt_sink(cfg: Config) -> Sink | None:
+    """Build the real-time VRM MQTT sink, or ``None`` if it can't be set up.
+
+    Missing password or a connection failure logs a warning and returns ``None`` so the
+    other sinks (and the serial loop) keep running — never crash-loop the service.
+    """
+    from .sinks.vrm_mqtt import VrmMqttSink
+    from .vrm import vrm_portal_id
+
+    password = cfg.vrm_mqtt_password
+    if not password:
+        log.warning(
+            "VRM realtime enabled but no MQTT password — run `vedirect-influx vrm-register`"
+        )
+        return None
+    portal_id = cfg.vrm_portal_id or vrm_portal_id(cfg.vrm_iface)
+    try:
+        return VrmMqttSink(
+            portal_id,
+            password=password,
+            ca_file=cfg.vrm_ca_path,
+            instance=cfg.vrm_device_instance,
+            product_id=cfg.vrm_product_id,
+            custom_name=cfg.vrm_custom_name or None,
+            firmware=cfg.vrm_firmware or None,
+        )
+    except Exception:
+        log.exception("VRM MQTT sink setup failed; continuing without it")
+        return None
 
 
 def make_sink(cfg: Config) -> Sink:
@@ -93,15 +130,36 @@ def cmd_vrm_register(cfg: Config, test_only: bool) -> None:
     if not ok:
         print("ANNOUNCE failed — VRM did not return 'vrm: OK'. Check connectivity and try again.")
         sys.exit(1)
+
+    # Register the MQTT bridge password too (needs the installation to exist, i.e. after
+    # ANNOUNCE) so real-time / app visibility works once the install is claimed.
+    import time
+
+    from .vrm import store_mqtt_password
+
+    mqtt_pw = cfg.vrm_mqtt_password or _generate_auth_token(cfg.vrm_mqtt_password_file)
+    mqtt_ok = False
+    for attempt in range(3):  # storemqttpassword can be flaky right after ANNOUNCE
+        if store_mqtt_password(portal_id, mqtt_pw, ca_file=cfg.vrm_ca_path):
+            mqtt_ok = True
+            break
+        if attempt < 2:
+            time.sleep(5)
+    mqtt_line = (
+        f"  MQTT password : saved to {cfg.vrm_mqtt_password_file}\n"
+        if mqtt_ok
+        else "  MQTT password : NOT registered yet (claim the install first, then re-run)\n"
+    )
     print(
         "Registered with VRM.\n"
         f"  VRM Portal ID : {portal_id}\n"
-        f"  auth token    : saved to {cfg.vrm_auth_token_file}\n\n"
+        f"  auth token    : saved to {cfg.vrm_auth_token_file}\n"
+        f"{mqtt_line}\n"
         "Next steps to see your data:\n"
         "  1. Sign in at https://vrm.victronenergy.com\n"
         "  2. Add installation -> 'by VRM Portal ID'\n"
         f"  3. Enter: {portal_id}\n"
-        "  4. Enable the VRM sink (vrm.enabled: true) and run normally.\n"
+        "  4. Enable the sinks (vrm.enabled / vrm.realtime: true) and run normally.\n"
     )
 
 

@@ -29,6 +29,9 @@ from pathlib import Path
 #: VRM logging endpoint (HTTPS; the device-identity upload path).
 LOG_URL = "https://ccgxlogging.victronenergy.com/log/log.php"
 
+#: Endpoint that stores the per-device MQTT bridge password.
+STORE_MQTT_PASSWORD_URL = "https://ccgxlogging.victronenergy.com/log/storemqttpassword.php"
+
 #: Number of VRM MQTT brokers used by the portal-ID hash distribution.
 NUM_BROKERS = 128
 
@@ -74,6 +77,64 @@ def broker_for(portal_id: str) -> str:
     """
     index = sum(ord(c) for c in portal_id.lower().strip()) % NUM_BROKERS
     return f"mqtt{index}.victronenergy.com"
+
+
+def mqtt_username(portal_id: str) -> str:
+    """MQTT bridge username for the real-time VRM connection.
+
+    >>> mqtt_username("dca63241ea59")
+    'ccgxapikey_dca63241ea59'
+    """
+    return f"ccgxapikey_{portal_id}"
+
+
+def mqtt_topic(portal_id: str, service: str, instance: int, path: str) -> str:
+    """Build a VRM MQTT notification topic ``N/<portalID>/<service>/<instance><path>``.
+
+    >>> mqtt_topic("abc", "solarcharger", 0, "/Dc/0/Voltage")
+    'N/abc/solarcharger/0/Dc/0/Voltage'
+    """
+    return f"N/{portal_id}/{service}/{instance}{path}"
+
+
+def _build_log_context(ca_file: str | None, verify: bool) -> ssl.SSLContext:
+    """TLS context for the ccgxlogging host (CCGX CA, strict flag relaxed)."""
+    if not verify:
+        return ssl._create_unverified_context()
+    ctx = ssl.create_default_context(cafile=ca_file)
+    if hasattr(ssl, "VERIFY_X509_STRICT"):
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return ctx
+
+
+def store_mqtt_password(
+    portal_id: str,
+    password: str,
+    *,
+    ca_file: str | None = None,
+    verify: bool = True,
+    timeout: float = 20.0,
+) -> bool:
+    """Register the MQTT bridge password for ``portal_id`` (enables two-way comms).
+
+    POSTs to ``storemqttpassword.php``. Note: this only succeeds once the installation
+    exists (i.e. after an ``ANNOUNCE``). Returns ``True`` on HTTP 200.
+    """
+    body = urllib.parse.urlencode(
+        {"identifier": mqtt_username(portal_id), "mqttPassword": password}
+    ).encode()
+    req = urllib.request.Request(
+        STORE_MQTT_PASSWORD_URL,
+        data=body,
+        method="POST",
+        headers={"content-type": "application/x-www-form-urlencoded", "User-Agent": "dbus-mqtt"},
+    )
+    ctx = _build_log_context(ca_file, verify)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+            return r.status == 200
+    except (urllib.error.URLError, OSError):
+        return False
 
 
 def vrm_encode(
@@ -136,14 +197,9 @@ class VrmClient:
         self.timeout = timeout
 
     def _build_context(self) -> ssl.SSLContext:
-        if not self.verify:
-            return ssl._create_unverified_context()
-        ctx = ssl.create_default_context(cafile=self.ca_file)
-        # Victron's CCGX CA marks basicConstraints non-critical; tolerate that
-        # without disabling verification (Python 3.13+ enables strict by default).
-        if hasattr(ssl, "VERIFY_X509_STRICT"):
-            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
-        return ctx
+        # Victron's CCGX CA marks basicConstraints non-critical; the helper
+        # tolerates that without disabling verification (3.13+ defaults to strict).
+        return _build_log_context(self.ca_file, self.verify)
 
     def _post(
         self, command: int, data: dict, interval: int = 0, to_offset: int | None = None

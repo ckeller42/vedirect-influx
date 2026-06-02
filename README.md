@@ -53,7 +53,9 @@ flowchart LR
     M --> I[("InfluxDB\nvictron_mppt\nvictron_history_daily")]
     I --> G["Grafana"]
     M -. optional .-> V["VrmSink"]
-    V -->|"HTTPS POST log.php"| VRM["VRM Portal\n& Victron app"]
+    V -->|"HTTPS log.php"| VRM["VRM Portal (web)"]
+    M -. optional .-> Q["VrmMqttSink"]
+    Q -->|"MQTT N/…"| APP["VictronConnect app\n(live)"]
 ```
 
 Sinks implement a small `Sink` interface; `MultiSink` fans each sample out to all of them, so
@@ -184,6 +186,22 @@ vrm:
   interval_s: 60
   auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
 ```
+
+To also show the device **live in the VictronConnect app** (real-time, "two-way communication"),
+enable the MQTT bridge — install the extra and set `realtime: true`:
+
+```bash
+pip install "vedirect-influx[mqtt]"   # adds paho-mqtt
+```
+
+```yaml
+vrm:
+  enabled: true
+  realtime: true   # publish over MQTT too → live in the app
+```
+
+`vrm-register` sets up both the logging token and the MQTT password. The web Portal works with
+just `enabled`; `realtime` is what populates VictronConnect's VRM tab.
 
 Full protocol, the field→code map, and caveats are in [docs/VRM.md](docs/VRM.md).
 
