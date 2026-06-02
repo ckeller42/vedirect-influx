@@ -14,11 +14,13 @@ Usage:
 For Grafana Cloud, pass a viewer URL and a service-account token via --token instead
 of --user/--password.
 """
+
 import argparse
 import asyncio
 
 
 async def shot(args):
+    """Render the dashboard to a PNG, waiting for panels to draw."""
     from playwright.async_api import async_playwright
 
     async with async_playwright() as p:
@@ -56,6 +58,7 @@ async def shot(args):
 
 
 def main():
+    """Parse CLI args and capture the screenshot."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", required=True, help="Grafana base URL")
     ap.add_argument("--uid", required=True, help="dashboard uid")
