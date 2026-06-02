@@ -151,7 +151,7 @@ This tool builds on the documented VE.Direct HEX protocol and prior MIT-licensed
 **differentiator**: HEX **daily-history** decode **plus InfluxDB ingest** in one tool.
 
 | Project | What it does | Relation |
-|---|---|---|
+| --- | --- | --- |
 | [karioja/vedirect](https://github.com/karioja/vedirect) | Text-protocol parser | Text-decode approach |
 | [simmonslr/vedirecthex](https://github.com/simmonslr/vedirecthex) | HEX GET/SET CLI | HEX framing reference |
 | [krahabb/esphome-victron-vedirect](https://github.com/krahabb/esphome-victron-vedirect) | Full HEX+text for ESPHome | Record-decode reference |
