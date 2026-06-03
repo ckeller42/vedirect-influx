@@ -90,5 +90,5 @@ follow_imports = "skip"
 ignore_errors = true
 
 [tool.codespell]
-skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json,vedirect_influx/_vendor"
+skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json,*/_vendor,*/_vendor/*"
 ignore-words-list = "ot,ser"  # short tokens: flux/JSON data, ser=serial var
