@@ -36,3 +36,18 @@ def test_build_sinks_fans_out_to_vrm_when_enabled():
 def test_build_sinks_primary_only_when_vrm_disabled():
     sinks = build_sinks(Config(sink_type="stdout"))
     assert len(sinks) == 1 and isinstance(sinks[0], StdoutSink)
+
+
+def test_vreg_ipc_off_by_default():
+    assert Config().vreg_ipc_enabled is False
+    assert Config().vreg_ipc_socket.endswith("vreg.sock")
+
+
+def test_vreg_ipc_config_loaded(tmp_path):
+    cfg_file = tmp_path / "c.yaml"
+    cfg_file.write_text(
+        "sink:\n  type: stdout\nvreg:\n  ipc_enabled: true\n  ipc_socket: /tmp/x.sock\n"
+    )
+    cfg = Config.load(str(cfg_file))
+    assert cfg.vreg_ipc_enabled is True
+    assert cfg.vreg_ipc_socket == "/tmp/x.sock"

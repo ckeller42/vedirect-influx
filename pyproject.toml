@@ -29,9 +29,16 @@ dev = [
     "build>=1.0",
     "twine>=5.0",
 ]
+# VictronConnect-Remote: the VregLink D-Bus service (Linux/Pi only). Needs the
+# system D-Bus + GLib; not installable/importable on macOS dev machines.
+vcr = [
+    "dbus-python>=1.3",
+    "PyGObject>=3.46",
+]
 
 [project.scripts]
 vedirect-influx = "vedirect_influx.cli:main"
+vedirect-influx-vreglink = "vedirect_influx.vreglink_service:main"
 
 [project.urls]
 Homepage = "https://github.com/ckeller42/vedirect-influx"
@@ -46,12 +53,15 @@ vedirect_influx = ["ccgx-ca.pem"]
 
 [tool.pytest.ini_options]
 # importlib mode avoids duplicate-module collisions when --doctest-modules
-# imports the package modules alongside the test modules.
-addopts = "--doctest-modules --import-mode=importlib"
+# imports the package modules alongside the test modules. The VregLink service
+# and the vendored velib code import dbus/GLib (Pi only), so they are excluded
+# from doctest collection; they are syntax-checked and integration-tested instead.
+addopts = "--doctest-modules --import-mode=importlib --ignore=vedirect_influx/vreglink_service.py --ignore=vedirect_influx/_vendor"
 testpaths = ["vedirect_influx", "tests"]
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["vedirect_influx/_vendor"]  # vendored third-party (velib_python)
 target-version = "py39"
 
 [tool.ruff.lint]
@@ -72,7 +82,13 @@ convention = "pep257"
 python_version = "3.10"  # type-check semantics; runtime still supports 3.9
 ignore_missing_imports = true  # pyserial / influxdb_client ship no stubs
 warn_unused_ignores = true
+exclude = ["vedirect_influx/_vendor/"]
+
+[[tool.mypy.overrides]]
+module = "vedirect_influx._vendor.*"  # vendored velib_python; not our code
+follow_imports = "skip"
+ignore_errors = true
 
 [tool.codespell]
-skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json"
+skip = ".git,*.png,tests/fixtures/*,dist,build,*.egg-info,deploy/grafana-victron.json,*/_vendor,*/_vendor/*"
 ignore-words-list = "ot,ser"  # short tokens: flux/JSON data, ser=serial var
