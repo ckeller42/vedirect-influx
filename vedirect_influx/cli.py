@@ -171,6 +171,10 @@ def main(argv: list[str] | None = None) -> None:
 
     sink = make_sink(cfg)
     reader = SerialReader(cfg, sink)
+    if cfg.vreg_ipc_enabled:
+        from .ipc import VregIpcServer
+
+        VregIpcServer(reader, cfg.vreg_ipc_socket).start()
     try:
         reader.run()
     finally:

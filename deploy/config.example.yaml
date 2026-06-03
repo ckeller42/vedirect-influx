@@ -28,3 +28,10 @@ vrm:
   interval_s: 60
   auth_token_file: /etc/vedirect-influx/vrm_auth_token.txt
   # history_backfill: false  # experimental: upload >1-day-old history via TO
+
+# Optional, EXPERIMENTAL (Linux/Pi only): expose registers to the VictronConnect-Remote
+# D-Bus service over a local socket. Off by default. Needs the `vcr` extra + the Venus
+# component stack -- see docs/vcr-component-assembly-scope.md.
+vreg:
+  ipc_enabled: false
+  # ipc_socket: /run/vedirect-influx/vreg.sock
