@@ -38,6 +38,23 @@ def test_build_sinks_primary_only_when_vrm_disabled():
     assert len(sinks) == 1 and isinstance(sinks[0], StdoutSink)
 
 
+def test_announce_reports_real_version_not_software_name():
+    """ANNOUNCE `v` must be a real version (VRM shows it as the gateway firmware),
+    not the literal package name."""
+    import re
+
+    from vedirect_influx.cli import _announce_info, _software_version
+
+    v = _software_version()
+    assert v != "vedirect-influx"
+    assert re.match(r"^\d+(\.\d+)+", v) or v.startswith("0+"), f"not version-like: {v!r}"
+
+    info = _announce_info(Config(vrm_product_id=0xA075, vrm_custom_name="BusPi 75/15"))
+    assert info["v"] == v
+    assert info["mi"] == 0xA075
+    assert info["mn"] == "BusPi 75/15"
+
+
 def test_vreg_ipc_off_by_default():
     assert Config().vreg_ipc_enabled is False
     assert Config().vreg_ipc_socket.endswith("vreg.sock")
