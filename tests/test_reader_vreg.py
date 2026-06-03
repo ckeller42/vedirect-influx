@@ -39,3 +39,9 @@ def test_vreg_get_transport_error_on_no_response():
     status, data = reader.vreg_get(0x0100, timeout=0.1, retries=1)
     assert status == 0x8300
     assert data == b""
+
+
+def test_vreg_get_transport_error_when_port_not_open():
+    # IPC GET may arrive before run() opens the port; must not raise.
+    reader = SerialReader(config=None, sink=None)  # _ser is None
+    assert reader.vreg_get(0x0100) == (0x8300, b"")

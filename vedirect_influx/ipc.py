@@ -82,7 +82,8 @@ def vreg_ipc_get(path: str, register: int, timeout: float = 5.0) -> tuple[int, b
         s.settimeout(timeout)
         s.connect(path)
         s.sendall(f"GET {register}\n".encode())
-        reply = s.makefile("rb").readline().decode("ascii", "replace").strip()
+        with s.makefile("rb") as f:
+            reply = f.readline().decode("ascii", "replace").strip()
     parts = reply.split()
     if parts and parts[0] == "OK":
         return (int(parts[1]), bytes.fromhex(parts[2]) if len(parts) > 2 else b"")

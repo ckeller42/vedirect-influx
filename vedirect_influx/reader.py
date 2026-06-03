@@ -41,19 +41,24 @@ class SerialReader:
         return self._ser
 
     def _read_hex_response(self, register: int, timeout: float = 2.0, retries: int = 3):
-        """Send Get(register) and wait for the matching HEX response."""
+        """Send Get(register) and wait for the matching HEX response.
+
+        Holds ``_serial_lock`` for this single register exchange only, so other
+        readers (the text loop, ``vreg_get``) interleave between calls.
+        """
         assert self._ser is not None
-        for _ in range(retries):
-            self._ser.reset_input_buffer()
-            self._ser.write(build_get(register))
-            deadline = time.time() + timeout
-            buf = b""
-            while time.time() < deadline:
-                buf += self._ser.read(512)
-                for line in buf.split(b"\n"):
-                    r = parse_frame(line.strip())
-                    if r is not None and r.register == register:
-                        return r
+        with self._serial_lock:
+            for _ in range(retries):
+                self._ser.reset_input_buffer()
+                self._ser.write(build_get(register))
+                deadline = time.time() + timeout
+                buf = b""
+                while time.time() < deadline:
+                    buf += self._ser.read(512)
+                    for line in buf.split(b"\n"):
+                        r = parse_frame(line.strip())
+                        if r is not None and r.register == register:
+                            return r
         return None
 
     def vreg_get(self, register: int, timeout: float = 2.0, retries: int = 3) -> tuple[int, bytes]:
@@ -61,11 +66,12 @@ class SerialReader:
 
         Returns ``(status, data)``: status ``0`` = OK (HEX flags 0x00), the HEX
         flags byte for a device-level error, or ``0x8300`` when no response
-        arrived (transport error). Safe to call from another thread; serialised
-        against the text-read loop via ``_serial_lock``.
+        arrived / the port isn't open yet (transport error). Safe to call from
+        another thread; serialised against the text-read loop via ``_serial_lock``.
         """
-        with self._serial_lock:
-            resp = self._read_hex_response(register, timeout=timeout, retries=retries)
+        if self._ser is None:
+            return (0x8300, b"")
+        resp = self._read_hex_response(register, timeout=timeout, retries=retries)
         if resp is None:
             return (0x8300, b"")
         return (resp.flags, resp.data)
@@ -77,9 +83,8 @@ class SerialReader:
             return 0
         today = datetime.now().date()
         written = 0
-        with self._serial_lock:
-            history = [self._read_hex_response(history_register(d)) for d in range(HISTORY_DAYS)]
-        for days_ago, resp in enumerate(history):
+        for days_ago in range(HISTORY_DAYS):
+            resp = self._read_hex_response(history_register(days_ago))
             if resp is None or resp.empty:
                 continue
             rec = decode_daily(resp.data, days_ago)

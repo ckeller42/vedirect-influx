@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-#: VReg result code returned for any write attempt (read-only device).
-SETVREG_READONLY_STATUS = 0x8100
+#: VReg result code returned for any write attempt: 0x8102 = "VREG is read-only".
+SETVREG_READONLY_STATUS = 0x8102
 
 
 def vreg_response(ipc_get: Callable[[int], tuple[int, bytes]], register: int) -> tuple[int, bytes]:
