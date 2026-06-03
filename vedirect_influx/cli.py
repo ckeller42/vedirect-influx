@@ -12,8 +12,29 @@ from .reader import SerialReader
 from .sinks.base import Sink
 from .sinks.multi import MultiSink
 
-#: Reported to VRM in the ANNOUNCE (mirrors Venus' vrmlogger version field).
-SOFTWARE_VERSION = "vedirect-influx"
+
+def _software_version() -> str:
+    """Return this package's version, reported to VRM as the device firmware (ANNOUNCE ``v``).
+
+    VRM surfaces this as the gateway's "Firmware version", so it must be a real
+    version string, not the package name.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("vedirect-influx")
+    except PackageNotFoundError:  # running from a source checkout, not installed
+        return "0+unknown"
+
+
+def _announce_info(cfg: Config) -> dict:
+    """Build the ANNOUNCE payload identifying this install to VRM (product, name, firmware)."""
+    return {
+        "v": _software_version(),
+        "cp": 0b11111,
+        "mi": cfg.vrm_product_id,
+        "mn": cfg.vrm_custom_name or "vedirect-influx",
+    }
 
 
 def make_vrm_sink(cfg: Config) -> Sink:
@@ -83,13 +104,7 @@ def cmd_vrm_register(cfg: Config, test_only: bool) -> None:
         print("vrm: OK" if ok else "VRM did not accept the test post (check network/CA)")
         sys.exit(0 if ok else 1)
 
-    announce = {
-        "v": SOFTWARE_VERSION,
-        "cp": 0b11111,
-        "mi": cfg.vrm_product_id,
-        "mn": cfg.vrm_custom_name or "vedirect-influx",
-    }
-    ok = client.announce(announce)
+    ok = client.announce(_announce_info(cfg))
     if not ok:
         print("ANNOUNCE failed — VRM did not return 'vrm: OK'. Check connectivity and try again.")
         sys.exit(1)
