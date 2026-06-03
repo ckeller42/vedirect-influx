@@ -24,6 +24,7 @@ repos:
     hooks:
       - id: codespell
         additional_dependencies: [tomli]
+        exclude: ^vedirect_influx/_vendor/  # vendored third-party (velib_python)
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0

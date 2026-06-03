@@ -38,6 +38,10 @@ class Config:
     vrm_auth_token_file: str = "/etc/vedirect-influx/vrm_auth_token.txt"
     vrm_ca_file: str = ""  # blank -> bundled ccgx-ca.pem
     vrm_history_backfill: bool = False
+    # VregLink IPC (optional; lets the VictronConnect-Remote D-Bus service read
+    # registers from this reader). Off by default.
+    vreg_ipc_enabled: bool = False
+    vreg_ipc_socket: str = "/run/vedirect-influx/vreg.sock"
 
     @property
     def influx_token(self) -> str:
@@ -70,6 +74,7 @@ class Config:
             hist = raw.get("history", {})
             sink = raw.get("sink", {})
             vrm = raw.get("vrm", {})
+            vreg = raw.get("vreg", {})
             data = dict(
                 port=serial.get("port", cls.port),
                 baud=serial.get("baud", cls.baud),
@@ -96,5 +101,7 @@ class Config:
                 vrm_auth_token_file=vrm.get("auth_token_file", cls.vrm_auth_token_file),
                 vrm_ca_file=vrm.get("ca_file", cls.vrm_ca_file),
                 vrm_history_backfill=vrm.get("history_backfill", cls.vrm_history_backfill),
+                vreg_ipc_enabled=vreg.get("ipc_enabled", cls.vreg_ipc_enabled),
+                vreg_ipc_socket=vreg.get("ipc_socket", cls.vreg_ipc_socket),
             )
         return cls(**data)
