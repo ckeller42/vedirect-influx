@@ -17,6 +17,58 @@ creation). So the only path is to run the *actual* components.
 `solarcharger` service that exposes the MPPT's **`VregLink`** — which we can implement ourselves
 because we already speak VE.Direct text + HEX in `vedirect-influx`.
 
+## Status & findings (2026-06-03)
+
+> **SHELVED.** VictronConnect-Remote is **not achievable without genuine Venus OS**. The user chose
+> not to flash Venus, so this work is parked. buspi runs **InfluxDB → Grafana only**; the VregLink
+> code below is **merged but off-by-default and dormant**. For config, use VictronConnect over the
+> SmartSolar's **Bluetooth** (direct, no infra); VRM web/app remains available for optional remote
+> monitoring.
+
+### Works / verified
+
+| Capability | Status | How it was verified |
+| --- | --- | --- |
+| Remote monitoring via VRM (`log.php`, PR #10) | **Works (live-tested)** | MPPT showed in VRM web + app: battery ~13.4 V, Float, daily/total yields, PV, state |
+| Real-time VRM MQTT (`VrmMqttSink`, PR #11) | Connects + publishes | connects `mqtt92:8883` as `ccgxapikey_<id>`; publishes `N/` topics; answers `R/` keepalives |
+| `mqtt-rpc` broker authentication | **Broker accepts our creds** | with *fresh* creds: CONNACK Success **and** SUBSCRIBE granted on `P/<id>/in/#` |
+| VregLink core (PR #13) + service shell (#14) | **Unit-tested only** | `reader.vreg_get`, `ipc.py`, `vreglink.py` covered; the D-Bus service was **not** run on a device |
+| Firmware `v` field (PR #12) | Fixed | had sent the package *name* as the gateway firmware; now the package version |
+
+### Tested and FAILED — the actual blocker
+
+VictronConnect filters on VRM's backend flag **`twoWayCommunication`** (→ `hasVictronConnect`). It
+**never flipped** from any signal a non-Venus device can produce — each observed false via
+`vrmapi.victronenergy.com/v2/installations/<id>/system-overview`:
+
+| Attempt | Result |
+| --- | --- |
+| `log.php` logging protocol | **No** two-way/`VrmPortal` code exists (confirmed in `vrmlogger/datalist.py`) |
+| MQTT `settings/0/Settings/Network/VrmPortal = 2` | no effect |
+| Sustained plain RPC client (correct creds + `rpc-ccgx_<r>` clientid, ~1 h) | no effect |
+| **Genuine `mosquitto` bridge** (both `vrm`+`rpc` to `:443`, GX clientids, CCGX CA) | no effect |
+| Announce as CCGX (`0xC001`) + publish a `system` service | VRM listed a **"Gateway"** device, but `isSystem` stayed `0` and the flag stayed false |
+| Fresh install announced with valid `v3.55` firmware from creation | flag still false |
+| Wait for VRM lazy re-evaluation (minutes) | no change |
+
+Net: VictronConnect's VRM tab shows **"No devices found"**, and **zero** RPC probes ever reach
+`P/<id>/in`. Also: the `iuri/venus-vrmlogger` Docker image is **monitoring-only** (no `mqtt-rpc`, no
+`flashmq`).
+
+### Untested / open for future iterations
+
+| Open question | Why it matters |
+| --- | --- |
+| **Milestone 0:** does genuine Venus OS on a *Pi* flip `twoWayCommunication`? | The whole premise. Forum evidence says VC-R works on Venus-on-Pi (after VictronConnect app updates), but it was **not personally verified**. Decisive cheap test below |
+| VregLink `BusItem`+`VregLink` co-registration on the shared `/Devices/0/VregLink` path | Unverified; needs a real Venus `vreg-get-set` capture (flagged in `vreglink_service.py`) |
+| Would assembling FlashMQ + `dbus-flashmq` + `mqtt-rpc` (without full Venus) flip the flag? | The "alongside your stack" path; unproven |
+
+### Where the code lives
+
+PRs **#10** (VRM upload), **#11** (realtime MQTT), **#12** (firmware fix), **#13** (VregLink core),
+**#14** (VregLink D-Bus service) — merged to `main`. The VregLink/VC-R path is **off by default**
+(`vreg.ipc_enabled: false`) and inert unless the Venus stack runs and Milestone 0 passes.
+
 ## ⚠️ Milestone 0 — validate the premise before building (do this first)
 
 The entire payoff rests on one **unproven** assumption: that the genuine FlashMQ/`GXrpc` RPC bridge
