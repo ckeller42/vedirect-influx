@@ -8,6 +8,7 @@ to read the on-device daily-history registers (read-only).
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from datetime import date, datetime, timedelta
 
@@ -31,6 +32,7 @@ class SerialReader:
         self._text = TextFrameParser()
         self._last_live = 0.0
         self._last_history_day: date | None = None
+        self._serial_lock = threading.Lock()
 
     # -- serial helpers -------------------------------------------------
     def _open(self) -> serial.Serial:
@@ -54,6 +56,20 @@ class SerialReader:
                         return r
         return None
 
+    def vreg_get(self, register: int, timeout: float = 2.0, retries: int = 3) -> tuple[int, bytes]:
+        """Thread-safe on-demand VReg read.
+
+        Returns ``(status, data)``: status ``0`` = OK (HEX flags 0x00), the HEX
+        flags byte for a device-level error, or ``0x8300`` when no response
+        arrived (transport error). Safe to call from another thread; serialised
+        against the text-read loop via ``_serial_lock``.
+        """
+        with self._serial_lock:
+            resp = self._read_hex_response(register, timeout=timeout, retries=retries)
+        if resp is None:
+            return (0x8300, b"")
+        return (resp.flags, resp.data)
+
     # -- history --------------------------------------------------------
     def poll_history(self) -> int:
         """Read all daily-history registers; write populated days to the sink."""
@@ -61,8 +77,9 @@ class SerialReader:
             return 0
         today = datetime.now().date()
         written = 0
-        for days_ago in range(HISTORY_DAYS):
-            resp = self._read_hex_response(history_register(days_ago))
+        with self._serial_lock:
+            history = [self._read_hex_response(history_register(d)) for d in range(HISTORY_DAYS)]
+        for days_ago, resp in enumerate(history):
             if resp is None or resp.empty:
                 continue
             rec = decode_daily(resp.data, days_ago)
@@ -102,7 +119,8 @@ class SerialReader:
                         log.exception("startup history poll failed")
                 buf = b""
                 while True:
-                    chunk = ser.read(256)
+                    with self._serial_lock:
+                        chunk = ser.read(256)
                     if chunk:
                         buf += chunk
                         while b"\n" in buf:
