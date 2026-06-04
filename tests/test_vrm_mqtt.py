@@ -12,17 +12,20 @@ class FakeMqtt:
 
     def __init__(self):
         self.published = []  # (topic, payload)
-        self.disconnected = False
-        self.loop_stopped = False
+        self.subscribed = []
+        self.teardown = []  # records disconnect/loop_stop order
 
     def publish(self, topic, payload=None, qos=0, retain=False):
         self.published.append((topic, payload))
 
+    def subscribe(self, topic, qos=0):
+        self.subscribed.append(topic)
+
     def loop_stop(self):
-        self.loop_stopped = True
+        self.teardown.append("loop_stop")
 
     def disconnect(self):
-        self.disconnected = True
+        self.teardown.append("disconnect")
 
     def payloads(self):
         return {t: json.loads(p) for t, p in self.published}
@@ -89,10 +92,11 @@ def test_keepalive_request_triggers_full_publish():
     s.write_live({"battery_voltage": 13.49})  # populates the cache
     before = len(c.published)
     s._on_message(None, None, _Msg("R/dca63241ea59/system/0/Serial"))
-    after = c.payloads()
-    # cached value re-published and a completion marker emitted
-    assert after["N/dca63241ea59/solarcharger/0/Dc/0/Voltage"] == {"value": 13.49}
-    assert "N/dca63241ea59/full_publish_completed" in after
+    # assert on the NEW publishes (payloads() dedupes topics, so it can't prove
+    # the cached value was actually re-published during this keepalive)
+    new = {t: json.loads(p) for t, p in c.published[before:]}
+    assert new["N/dca63241ea59/solarcharger/0/Dc/0/Voltage"] == {"value": 13.49}
+    assert "N/dca63241ea59/full_publish_completed" in new
     assert len(c.published) > before
 
 
@@ -109,4 +113,20 @@ def test_close_marks_disconnected():
     s.write_live({"battery_voltage": 13.0})
     s.close()
     assert c.payloads()["N/dca63241ea59/solarcharger/0/Connected"] == {"value": 0}
-    assert c.disconnected is True
+    # paho order: disconnect() before loop_stop() so the final publish flushes
+    assert c.teardown == ["disconnect", "loop_stop"]
+
+
+def test_on_connect_failure_does_not_subscribe_or_publish():
+    s, c = make_sink()
+    n = len(c.published)
+    s._on_connect(c, None, None, 5)  # 5 = connection refused (bad credentials)
+    assert c.subscribed == []
+    assert len(c.published) == n  # nothing published into a refused connection
+
+
+def test_on_connect_success_subscribes_and_announces():
+    s, c = make_sink()
+    s._on_connect(c, None, None, 0)  # 0 = success
+    assert any(t.startswith("R/dca63241ea59/") for t in c.subscribed)
+    assert c.payloads()["N/dca63241ea59/solarcharger/0/Connected"] == {"value": 1}

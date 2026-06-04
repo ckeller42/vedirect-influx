@@ -98,10 +98,19 @@ class VrmMqttSink(Sink):
         c.on_message = self._on_message
         c.connect(broker, 8883, keepalive=60)
         c.loop_start()
-        log.info("VRM MQTT connected to %s as %s", broker, mqtt_username(self.portal_id))
+        # NB: connect() returns before the broker's CONNACK; success/failure is
+        # reported in _on_connect (the broker may still reject our credentials).
+        log.info("VRM MQTT connecting to %s as %s", broker, mqtt_username(self.portal_id))
 
     # -- paho callbacks (v2 signatures; extra args tolerated) -----------------
     def _on_connect(self, client, userdata, flags, reason_code, properties=None) -> None:
+        # reason_code is an int (paho v1) or a ReasonCode (v2); both are truthy/
+        # non-zero on failure. Surface auth/ACL rejections instead of silently
+        # publishing into a dead connection.
+        failed = getattr(reason_code, "is_failure", None)
+        if failed if failed is not None else bool(reason_code):
+            log.error("VRM MQTT connection refused by broker: %s", reason_code)
+            return
         # subscribe to the app's read/keepalive requests, then announce ourselves
         client.subscribe(f"R/{self.portal_id}/#")
         self._publish_identity()
@@ -171,7 +180,9 @@ class VrmMqttSink(Sink):
     def close(self) -> None:
         try:
             self._pub("/Connected", 0)
-            self._client.loop_stop()
+            # paho order: disconnect() first (queues DISCONNECT + lets the loop
+            # flush the final /Connected=0), then loop_stop() to join the thread.
             self._client.disconnect()
+            self._client.loop_stop()
         except Exception:  # pragma: no cover - best-effort teardown
             log.exception("VRM MQTT close failed")
