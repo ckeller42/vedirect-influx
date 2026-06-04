@@ -153,10 +153,13 @@ Import [`deploy/grafana-victron.json`](deploy/grafana-victron.json) and select y
 
 ## Victron VRM Portal (direct, no Venus OS)
 
-Optionally upload the same data to [VRM](https://vrm.victronenergy.com) and the **Victron app** —
-*in addition* to InfluxDB — without running Venus OS. `vedirect-influx` speaks the same
-`log.php` upload a Venus GX device uses, identifying itself by a **VRM Portal ID** derived from
-the host's ethernet MAC. One-time registration, then claim the installation in VRM:
+Optionally upload the same data to the [VRM Portal](https://vrm.victronenergy.com) and the
+**VRM app** (Victron's *monitoring* app) — *in addition* to InfluxDB — without running Venus OS.
+This is **monitoring only**: the device appears on the VRM website and in the VRM app, **not in
+VictronConnect** (VictronConnect-Remote needs a genuine GX — see [Limitations](docs/VRM.md#limitations)).
+`vedirect-influx` speaks the same `log.php` upload a Venus GX device uses, identifying itself by a
+**VRM Portal ID** derived from the host's ethernet MAC. One-time registration, then claim the
+installation in VRM:
 
 ```mermaid
 sequenceDiagram
