@@ -12,8 +12,12 @@ import yaml
 class Config:
     """Runtime configuration (serial, history, and sink settings)."""
 
+    source: str = "serial"  # "serial" (VE.Direct USB) | "ble" (Bluetooth Instant Readout)
     port: str = "/dev/victron"
     baud: int = 19200
+    # BLE source (when source == "ble"); the encryption key lives in a 0600 file, not here
+    ble_mac: str = ""
+    ble_key_file: str = ""
     live_interval_s: int = 15
     history_enabled: bool = True
     history_poll_on_start: bool = True
@@ -48,6 +52,14 @@ class Config:
         return os.environ.get(self.influx_token_env, "")
 
     @property
+    def ble_key(self) -> str:
+        """Victron Instant Readout encryption key, read from ``ble_key_file`` (0600)."""
+        if self.ble_key_file and os.path.exists(self.ble_key_file):
+            with open(self.ble_key_file) as f:
+                return f.read().strip()
+        return ""
+
+    @property
     def vrm_ca_path(self) -> str:
         """Path to the CCGX CA bundle (configured override, else the packaged one)."""
         if self.vrm_ca_file:
@@ -75,9 +87,13 @@ class Config:
             sink = raw.get("sink", {})
             vrm = raw.get("vrm", {})
             vreg = raw.get("vreg", {})
+            ble = raw.get("ble", {})
             data = dict(
+                source=raw.get("source", cls.source),
                 port=serial.get("port", cls.port),
                 baud=serial.get("baud", cls.baud),
+                ble_mac=ble.get("mac", cls.ble_mac),
+                ble_key_file=ble.get("key_file", cls.ble_key_file),
                 live_interval_s=raw.get("live_interval_s", cls.live_interval_s),
                 history_enabled=hist.get("enabled", cls.history_enabled),
                 history_poll_on_start=hist.get("poll_on_start", cls.history_poll_on_start),
