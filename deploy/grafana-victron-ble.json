@@ -571,7 +571,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "import \"timezone\"\noption location = timezone.location(\"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"yield_today_kwh\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"yield_today_kwh\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
       "description": "Daily yield derived from the live `yield_today_kwh` (cumulative, resets at local midnight): the day's max = that day's total. Derived over BLE — no on-device history register."
@@ -619,7 +619,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "import \"timezone\"\noption location = timezone.location(\"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"pv_power\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"pv_power\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
       "description": "Peak PV power that day, derived from live `pv_power` samples (BLE)."
@@ -664,7 +664,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "import \"timezone\"\noption location = timezone.location(\"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         },
         {
           "datasource": {
@@ -672,7 +672,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "B",
-          "query": "import \"timezone\"\noption location = timezone.location(\"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: min, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: min, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
       "description": "Daily highest/lowest battery voltage, derived from live `battery_voltage` samples (BLE)."
