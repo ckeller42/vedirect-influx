@@ -103,3 +103,15 @@ lands before relying on it.
   serial reader is producing live frames (InfluxDB/stdout sink shows data too).
 - **TLS verification error** — ensure the bundled `ccgx-ca.pem` is present (it's package data); as
   a last resort point `vrm.ca_file` at a fresh copy.
+
+## Limitations
+
+- **Monitoring only — not VictronConnect.** The uploaded data appears on the **VRM website and in
+  the VRM (monitoring) app**. It does **not** appear in **VictronConnect**: VictronConnect-Remote
+  needs the installation flagged as a genuine GX (`twoWayCommunication` on VRM's backend), which is
+  only granted to a real Venus/GX stack — not reproducible from a `log.php` uploader. Use
+  VictronConnect over the charger's own **Bluetooth** for configuration instead.
+- **No GX system roll-up.** VRM's overview tiles read the `com.victronenergy.system` aggregate,
+  which this tool does not publish; per-device data still shows under **Advanced**.
+- **Unofficial.** Targets an undocumented endpoint and identifies as a GX device — for personal use
+  with your own hardware; Victron may change or block it at any time.
