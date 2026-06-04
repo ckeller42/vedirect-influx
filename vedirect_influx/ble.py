@@ -29,31 +29,35 @@ def solar_fields(data) -> dict:
     """Map a victron-ble ``SolarChargerData`` to ``victron_mppt`` field names.
 
     Duck-typed on the ``get_*`` accessors so it is testable without the ``ble`` extra.
-    Only fields the advertisement actually carries are included.
+    Only fields the advertisement actually carries are included. Every value is
+    coerced to ``float`` to match the VE.Direct text path (``float(value) * scale``):
+    both sources write the same ``victron_mppt`` measurement, and InfluxDB rejects a
+    point if a field's type differs from the existing schema (e.g. ``charge_state`` /
+    ``error_code`` / ``pv_power`` arrive as ints/enums off victron-ble).
     """
 
-    def _enum_int(v):
-        return int(getattr(v, "value", v))
+    def _num(v):
+        return float(getattr(v, "value", v))
 
     out: dict = {}
     bv = data.get_battery_voltage()
     if bv is not None:
-        out["battery_voltage"] = bv
+        out["battery_voltage"] = _num(bv)
     bi = data.get_battery_charging_current()
     if bi is not None:
-        out["battery_current"] = bi
+        out["battery_current"] = _num(bi)
     pv = data.get_solar_power()
     if pv is not None:
-        out["pv_power"] = pv
+        out["pv_power"] = _num(pv)
     load = data.get_external_device_load()
     if load is not None:
-        out["load_current"] = load
+        out["load_current"] = _num(load)
     cs = data.get_charge_state()
     if cs is not None:
-        out["charge_state"] = _enum_int(cs)
+        out["charge_state"] = _num(cs)  # CS code as float (matches text path)
     err = data.get_charger_error()
     if err is not None:
-        out["error_code"] = _enum_int(err)
+        out["error_code"] = _num(err)
     yt = data.get_yield_today()
     if yt is not None:
         out["yield_today_kwh"] = round(yt / 1000, 3)  # Wh -> kWh
