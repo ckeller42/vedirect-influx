@@ -91,6 +91,15 @@ def make_sink(cfg: Config) -> Sink:
     return MultiSink(build_sinks(cfg))
 
 
+def make_reader(cfg: Config, sink: Sink):
+    """Build the configured data source: VE.Direct serial, or Bluetooth (Instant Readout)."""
+    if cfg.source == "ble":
+        from .ble import BleReader
+
+        return BleReader(cfg, sink)
+    return SerialReader(cfg, sink)
+
+
 def cmd_vrm_register(cfg: Config, test_only: bool) -> None:
     """Register this device with VRM (or just ping it with ``--test``)."""
     from .vrm import VrmClient, vrm_portal_id
@@ -170,8 +179,8 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     sink = make_sink(cfg)
-    reader = SerialReader(cfg, sink)
-    if cfg.vreg_ipc_enabled:
+    reader = make_reader(cfg, sink)
+    if cfg.source != "ble" and cfg.vreg_ipc_enabled:
         from .ipc import VregIpcServer
 
         VregIpcServer(reader, cfg.vreg_ipc_socket).start()

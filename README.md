@@ -33,7 +33,9 @@ Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 - **Read-only** — never writes charger settings; cannot misconfigure the device
 - Pluggable `Sink` interface (InfluxDB included; stdout for debugging)
 - Optional **Victron VRM Portal** upload — direct, **no Venus OS** ([see below](#victron-vrm-portal-direct-no-venus-os))
-- Config via YAML; secrets via env var (never in the repo)
+- Optional **Bluetooth source** — read a SmartSolar over BLE *Instant Readout* (no VE.Direct cable);
+  set `source: ble` ([see below](#bluetooth-source-instant-readout))
+- Config via YAML; secrets via env var / file (never in the repo)
 - Ships a portable Grafana dashboard ([`deploy/grafana-victron.json`](deploy/grafana-victron.json))
 
 ## Architecture
@@ -150,6 +152,33 @@ sudo systemctl enable --now vedirect-influx
 
 Import [`deploy/grafana-victron.json`](deploy/grafana-victron.json) and select your InfluxDB
 (Flux) datasource when prompted.
+
+## Bluetooth source (Instant Readout)
+
+Read the SmartSolar over **Bluetooth** instead of the VE.Direct USB cable — flip one config field:
+
+```yaml
+source: ble                          # "serial" (default) | "ble"
+ble:
+  mac: DA:4B:25:C4:61:34             # the charger's BLE MAC
+  key_file: /etc/vedirect-influx/ble_key.txt   # Instant Readout encryption key (0600)
+```
+
+Install the extra and store the key (VictronConnect → device → ⚙ → Product info →
+"Instant readout via Bluetooth" → **Show**):
+
+```bash
+pip install "vedirect-influx[ble]"
+install -m600 /dev/stdin /etc/vedirect-influx/ble_key.txt <<< "<32-hex-key>"
+```
+
+**Switching between USB and Bluetooth is just the `source` field** — no code change; restart the
+service. The charger broadcasts AES-encrypted adverts decoded with your key (passive, no pairing).
+
+> ⚠️ BLE Instant Readout carries a **live subset only**: battery V/I, PV power, yield today,
+> charge state, error, load. It does **not** include `pv_voltage`, lifetime `yield_total`,
+> `max_power`, `tracker_mode`, or the on-device **daily history** — those need VE.Direct (USB).
+> Daily yield can be derived in Grafana from the logged `yield_today`.
 
 ## Victron VRM Portal (direct, no Venus OS)
 

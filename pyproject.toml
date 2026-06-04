@@ -35,6 +35,11 @@ vcr = [
     "dbus-python>=1.3",
     "PyGObject>=3.46",
 ]
+# Bluetooth source: read the SmartSolar over BLE "Instant Readout" instead of VE.Direct USB.
+ble = [
+    "victron-ble>=0.9",
+    "bleak>=0.21",
+]
 
 [project.scripts]
 vedirect-influx = "vedirect_influx.cli:main"

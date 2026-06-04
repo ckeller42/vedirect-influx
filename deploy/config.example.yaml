@@ -1,6 +1,14 @@
+# Data source: "serial" (VE.Direct USB, default) or "ble" (Bluetooth Instant Readout).
+source: serial
 serial:
   port: /dev/victron      # udev symlink to the VE.Direct USB adapter
   baud: 19200
+# Bluetooth source (when source: ble) — needs the `ble` extra (victron-ble, bleak) and BT on.
+# Live subset only (no pv_voltage / yield_total / max_power / daily history). The encryption
+# key goes in a 0600 file, NOT here (VictronConnect → device → Product info → Instant readout).
+ble:
+  mac: ""                 # e.g. DA:4B:25:C4:61:34
+  key_file: /etc/vedirect-influx/ble_key.txt
 live_interval_s: 15
 history:
   enabled: true
