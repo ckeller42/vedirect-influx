@@ -47,9 +47,18 @@ def test_solar_fields_maps_to_victron_mppt_names():
     assert f["battery_current"] == 2.4
     assert f["pv_power"] == 32
     assert f["yield_today_kwh"] == 0.51  # 510 Wh -> kWh
-    assert f["charge_state"] == 3  # enum -> int (matches VE.Direct CS codes)
+    assert f["charge_state"] == 3  # CS code (matches VE.Direct CS codes)
     assert f["error_code"] == 0
     assert f["load_current"] == 0.0
+
+
+def test_solar_fields_are_all_float():
+    # The VE.Direct text path stores every victron_mppt field as float
+    # (float(value) * scale). BLE writes the SAME measurement, so it must match
+    # the float schema or InfluxDB rejects the point with a field-type conflict
+    # (charge_state / error_code / pv_power come off victron-ble as ints/enums).
+    f = solar_fields(FakeSolarData())
+    assert all(type(v) is float for v in f.values()), {k: type(v) for k, v in f.items()}
 
 
 def test_solar_fields_skips_missing_values():

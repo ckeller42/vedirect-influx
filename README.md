@@ -150,8 +150,15 @@ sudo systemctl enable --now vedirect-influx
 
 ## Grafana
 
-Import [`deploy/grafana-victron.json`](deploy/grafana-victron.json) and select your InfluxDB
-(Flux) datasource when prompted.
+Two ready-to-import dashboards — pick the one matching your source, and select your InfluxDB
+(Flux) datasource when prompted:
+
+- [`deploy/grafana-victron.json`](deploy/grafana-victron.json) — **VE.Direct (USB)**: full
+  dashboard, incl. the device-recorded **daily history** (`victron_history_daily`).
+- [`deploy/grafana-victron-ble.json`](deploy/grafana-victron-ble.json) — **Bluetooth**: same
+  layout, but the daily-history panels are **derived in Flux** from the logged live
+  `victron_mppt` samples (daily yield = max of cumulative `yield_today_kwh` per local day; max
+  PV power and battery min/max from the live stream), since BLE carries no history register.
 
 ## Bluetooth source (Instant Readout)
 

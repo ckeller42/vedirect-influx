@@ -39,9 +39,15 @@
       "id": "stat",
       "name": "Stat",
       "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
     }
   ],
-  "title": "Victron Solar \u2014 VE.Direct (USB)",
+  "title": "Victron Solar — Bluetooth (Instant Readout)",
   "uid": null,
   "schemaVersion": 39,
   "version": 1,
@@ -54,7 +60,8 @@
   "tags": [
     "victron",
     "vedirect",
-    "solar"
+    "solar",
+    "bluetooth"
   ],
   "templating": {
     "list": []
@@ -64,12 +71,27 @@
   },
   "panels": [
     {
-      "id": 1,
-      "type": "row",
-      "title": "\u2600 Live",
+      "id": 99,
+      "type": "text",
+      "title": "",
       "gridPos": {
         "x": 0,
         "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Source: Bluetooth — SmartSolar Instant Readout (no VE.Direct cable).** Live subset only; the **Daily history** panels below are *derived* from the logged live samples (not the charger's on-device history register). `pv_voltage`, lifetime `yield_total`, `tracker_mode` are not in the BLE advert — use the **VE.Direct (USB)** dashboard for the device-recorded history and those fields."
+      }
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "☀ Live",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
         "w": 24,
         "h": 1
       },
@@ -82,7 +104,7 @@
       "title": "PV Power",
       "gridPos": {
         "x": 0,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -127,7 +149,7 @@
       "title": "Battery V",
       "gridPos": {
         "x": 4,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -173,7 +195,7 @@
       "title": "Battery A",
       "gridPos": {
         "x": 8,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -219,7 +241,7 @@
       "title": "Yield Today",
       "gridPos": {
         "x": 12,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -257,7 +279,7 @@
           "query": "from(bucket: v.defaultBucket) |> range(start: -5m) |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"yield_today_kwh\") |> last()"
         }
       ],
-      "description": "Energy harvested today. VE.Direct field `H20` (\u00d70.01 kWh)."
+      "description": "Energy harvested today. VE.Direct field `H20` (×0.01 kWh)."
     },
     {
       "id": 14,
@@ -265,7 +287,7 @@
       "title": "Charge State",
       "gridPos": {
         "x": 16,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -329,7 +351,7 @@
       "title": "Error",
       "gridPos": {
         "x": 20,
-        "y": 1,
+        "y": 4,
         "w": 4,
         "h": 4
       },
@@ -397,7 +419,7 @@
       "title": "Solar PV Power",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 8,
         "w": 12,
         "h": 7
       },
@@ -446,7 +468,7 @@
       "title": "Battery Voltage & Current",
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 8,
         "w": 12,
         "h": 7
       },
@@ -496,10 +518,10 @@
     {
       "id": 2,
       "type": "row",
-      "title": "\ud83d\udcc5 Daily history",
+      "title": "📅 Daily history",
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 15,
         "w": 24,
         "h": 1
       },
@@ -512,7 +534,7 @@
       "title": "Daily Solar Yield (kWh)",
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 16,
         "w": 16,
         "h": 8
       },
@@ -549,10 +571,10 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"yield_kwh\") |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"yield_today_kwh\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
-      "description": "Solar energy harvested that day (one point per day at midnight UTC). From HEX history register."
+      "description": "Daily yield derived from the live `yield_today_kwh` (cumulative, resets at local midnight): the day's max = that day's total. Derived over BLE — no on-device history register."
     },
     {
       "id": 31,
@@ -560,7 +582,7 @@
       "title": "Max PV Power / day (W)",
       "gridPos": {
         "x": 16,
-        "y": 13,
+        "y": 16,
         "w": 8,
         "h": 8
       },
@@ -597,10 +619,10 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"max_power_w\") |> keep(columns:[\"_time\",\"_value\"])"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"pv_power\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
-      "description": "Peak PV power reached that day."
+      "description": "Peak PV power that day, derived from live `pv_power` samples (BLE)."
     },
     {
       "id": 32,
@@ -608,7 +630,7 @@
       "title": "Daily Battery V (min/max)",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 24,
         "w": 24,
         "h": 7
       },
@@ -642,7 +664,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "A",
-          "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"max_battery_v\")"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: max, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         },
         {
           "datasource": {
@@ -650,10 +672,10 @@
             "uid": "${DS_INFLUXDB}"
           },
           "refId": "B",
-          "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_history_daily\" and r._field==\"min_battery_v\")"
+          "query": "import \"timezone\"\noption location = timezone.location(name: \"Europe/Berlin\")\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn:(r)=>r._measurement==\"victron_mppt\" and r._field==\"battery_voltage\")\n  |> aggregateWindow(every: 1d, fn: min, createEmpty: false, timeSrc: \"_start\")\n  |> keep(columns:[\"_time\",\"_value\"])"
         }
       ],
-      "description": "Highest and lowest battery voltage recorded that day (daily min/max)."
+      "description": "Daily highest/lowest battery voltage, derived from live `battery_voltage` samples (BLE)."
     }
   ]
 }
