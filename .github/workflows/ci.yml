@@ -77,7 +77,7 @@ jobs:
           cache: pip
       - run: pip install "codespell[toml]"
       - run: codespell   # config (skip + ignore-words) in pyproject.toml
-      - uses: DavidAnson/markdownlint-cli2-action@v18
+      - uses: DavidAnson/markdownlint-cli2-action@v23
         with:
           globs: "**/*.md"
       - name: Link check
