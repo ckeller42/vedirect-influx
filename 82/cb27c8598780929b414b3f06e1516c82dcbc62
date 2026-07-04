@@ -1,0 +1,27 @@
+tests/test_multisink.py
+  s_3dd2d594b05f24::t_b90d8549e5a6b2 15,28-32,63-87
+vedirect_influx/sinks/base.py
+  s_3dd2d594b05f24::t_26e73a09d915a0 20-22
+vedirect_influx/sinks/influx.py
+  s_3dd2d594b05f24::t_5c3da6c1dd4264 24,33,73-81
+vedirect_influx/sinks/multi.py
+  s_3dd2d594b05f24::t_a1ba3ee6b273c8 37-43
+vedirect_influx/sinks/stdout.py
+  s_3dd2d594b05f24::t_fe1a01f89964f4 18-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "82cb27c8598780929b414b3f06e1516c82dcbc62",
+  "prompts": {},
+  "sessions": {
+    "s_3dd2d594b05f24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab6890861c45fd65f",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
