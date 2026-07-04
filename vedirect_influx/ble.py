@@ -64,6 +64,28 @@ def solar_fields(data) -> dict:
     return out
 
 
+def battery_sense_fields(data) -> dict:
+    """Map a victron-ble ``BatterySenseData`` to ``victron_battery`` field names.
+
+    Duck-typed on the ``get_*`` accessors so it is testable without the ``ble``
+    extra. ``get_temperature()`` is already Celsius (victron-ble converts from
+    Kelvin) and ``get_voltage()`` is volts; both are coerced to ``float`` so the
+    ``victron_battery`` measurement keeps a consistent float schema.
+    """
+
+    def _num(v):
+        return float(getattr(v, "value", v))
+
+    out: dict = {}
+    t = data.get_temperature()
+    if t is not None:
+        out["temperature_c"] = _num(t)
+    v = data.get_voltage()
+    if v is not None:
+        out["battery_voltage"] = _num(v)
+    return out
+
+
 class BleReader:
     """Scan the charger's Instant Readout adverts and push live frames to the sink."""
 

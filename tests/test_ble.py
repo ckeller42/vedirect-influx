@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from vedirect_influx.ble import solar_fields
+from vedirect_influx.ble import battery_sense_fields, solar_fields
 from vedirect_influx.config import Config
 
 
@@ -73,6 +73,32 @@ def test_solar_fields_skips_missing_values():
     assert "pv_power" not in f
     assert "error_code" not in f
     assert f["battery_voltage"] == 13.38  # others still present
+
+
+class FakeBatterySenseData:
+    """Duck-typed stand-in for victron_ble BatterySenseData."""
+
+    def get_temperature(self):
+        return 21.5  # already Celsius from victron-ble
+
+    def get_voltage(self):
+        return 13.28
+
+
+def test_battery_sense_fields_maps_names_and_floats():
+    f = battery_sense_fields(FakeBatterySenseData())
+    assert f == {"temperature_c": 21.5, "battery_voltage": 13.28}
+    assert all(type(v) is float for v in f.values())
+
+
+def test_battery_sense_fields_skips_missing():
+    class NoTemp(FakeBatterySenseData):
+        def get_temperature(self):
+            return None
+
+    f = battery_sense_fields(NoTemp())
+    assert "temperature_c" not in f
+    assert f["battery_voltage"] == 13.28
 
 
 def test_source_defaults_to_serial():
