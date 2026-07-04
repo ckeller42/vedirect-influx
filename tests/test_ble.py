@@ -90,6 +90,33 @@ def test_ble_config_loaded(tmp_path):
     assert cfg.ble_key == "dummy-ble-key"  # read from key_file (0600)
 
 
+def test_battery_sense_config_loaded(tmp_path):
+    keyf = tmp_path / "bs_key.txt"
+    keyf.write_text("dummy-bs-key\n")
+    cfg_file = tmp_path / "c.yaml"
+    cfg_file.write_text(
+        "source: ble\n"
+        "ble:\n"
+        "  mac: DA:4B:25:C4:61:34\n"
+        "  key_file: /dev/null\n"
+        "  battery_sense:\n"
+        f"    mac: 11:22:33:44:55:66\n"
+        f"    key_file: {keyf}\n"
+        "sink:\n"
+        "  battery_measurement: victron_battery\n"
+    )
+    cfg = Config.load(str(cfg_file))
+    assert cfg.ble_battery_sense_mac == "11:22:33:44:55:66"
+    assert cfg.ble_battery_sense_key == "dummy-bs-key"  # read from key_file
+    assert cfg.battery_measurement == "victron_battery"
+
+
+def test_battery_measurement_defaults():
+    assert Config().battery_measurement == "victron_battery"
+    assert Config().ble_battery_sense_mac == ""
+    assert Config().ble_battery_sense_key == ""  # no key file -> empty
+
+
 def test_make_reader_selects_by_source():
     from vedirect_influx.ble import BleReader
     from vedirect_influx.cli import make_reader
