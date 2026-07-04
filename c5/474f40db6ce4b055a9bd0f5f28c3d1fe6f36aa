@@ -1,0 +1,19 @@
+tests/test_ble.py
+  s_6c618185833677::t_8aadf768a862f2 93-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c5474f40db6ce4b055a9bd0f5f28c3d1fe6f36aa",
+  "prompts": {},
+  "sessions": {
+    "s_6c618185833677": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aafe65f0a84303355",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
