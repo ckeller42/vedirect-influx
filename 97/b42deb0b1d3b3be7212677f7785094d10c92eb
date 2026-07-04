@@ -1,0 +1,21 @@
+tests/test_cli_wiring.py
+  s_a3fd8e36c0ccdc::t_1e1bfa505636e9 71-86
+vedirect_influx/cli.py
+  s_a3fd8e36c0ccdc::t_1b3322d77c7922 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "97b42deb0b1d3b3be7212677f7785094d10c92eb",
+  "prompts": {},
+  "sessions": {
+    "s_a3fd8e36c0ccdc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac33efc57bcfa41ff",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
