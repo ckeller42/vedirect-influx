@@ -17,5 +17,8 @@ class Sink(ABC):
     def write_history_day(self, fields: dict, day: date) -> None:
         """Write one daily-history record (timestamped at the day's midnight)."""
 
+    def write_battery(self, fields: dict, ts: datetime | None = None) -> None:  # noqa: B027
+        """Write a battery-sensor sample (temperature/voltage). Optional; default no-op."""
+
     def close(self) -> None:  # noqa: B027  # optional hook, intentionally not abstract
         """Release resources, if any (optional; default no-op)."""
