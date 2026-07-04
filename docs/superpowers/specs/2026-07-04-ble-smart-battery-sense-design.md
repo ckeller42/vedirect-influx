@@ -71,9 +71,10 @@ without the `ble` extra):
 Every value coerced to `float` (same InfluxDB type-consistency requirement as the
 solar path / PR #18). Only accessors that return non-`None` are included.
 
-**Implementation-time verification:** confirm the unit `victron-ble`'s
-`get_temperature()` returns for the Smart Battery Sense (Kelvin vs Celsius) and
-convert to Celsius if needed. A unit test pins the expected output once confirmed.
+Unit confirmed against `victron-ble` source (`devices/battery_sense.py`):
+`get_temperature()` already returns **Celsius** (it calls `kelvin_to_celsius()`
+internally) and `get_voltage()` returns **volts** — both are straight
+passthroughs, no conversion. `BatterySenseData` exposes only these two accessors.
 
 ### 3. Reader dispatch (`BleReader`)
 
