@@ -1,0 +1,19 @@
+docs/superpowers/specs/2026-07-04-ble-smart-battery-sense-design.md
+  s_35ed1c0106164e::t_96f440817b9104 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9befdaf8d5e7e7e1177f4919cd1e6e835cd6ca3d",
+  "prompts": {},
+  "sessions": {
+    "s_35ed1c0106164e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d5c6c95f-8aef-4a7e-bf44-0b9067f85792",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
