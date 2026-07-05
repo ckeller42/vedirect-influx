@@ -25,6 +25,18 @@ VICTRON_MFG_ID = 0x02E1
 INSTANT_READOUT_PREFIX = 0x10
 
 
+def detect_device_type(raw):
+    """Lazy wrapper around ``victron_ble.devices.detect_device_type``.
+
+    Kept module-level (not a lazy import inside the reader) so the ``ble`` extra
+    stays optional — ``victron_ble`` is only imported when an advert is decoded —
+    while remaining a single patch point for tests.
+    """
+    from victron_ble.devices import detect_device_type as _detect
+
+    return _detect(raw)
+
+
 def solar_fields(data) -> dict:
     """Map a victron-ble ``SolarChargerData`` to ``victron_mppt`` field names.
 
@@ -115,37 +127,46 @@ class BleReader:
             )
         return routes
 
-    async def _run(self) -> None:
-        from bleak import BleakScanner
-        from victron_ble.devices import detect_device_type
+    def _handle_advert(self, addr: str, raw: bytes | None, now: float, routes: dict) -> None:
+        """Dispatch one advert: route by MAC, guard prefix + throttle, decode, write."""
+        route = routes.get(addr)
+        if route is None:
+            return
+        key, mapper, writer = route
+        if not raw or raw[0] != INSTANT_READOUT_PREFIX:
+            return  # ignore the non-Instant-Readout record the device also emits
+        if now - self._last.get(addr, 0.0) < self.cfg.live_interval_s:
+            return
+        cls = detect_device_type(raw)
+        if cls is None:
+            return
+        try:
+            fields = mapper(cls(key).parse(raw))
+        except Exception:  # pragma: no cover - decrypt/parse guard
+            log.exception("BLE decode failed")
+            return
+        if fields:
+            writer(fields)
+            self._last[addr] = now
 
+    async def _run(self) -> None:
         routes = self._routes()
+        if not routes:
+            raise ValueError(
+                "BLE source has no devices configured (set ble.mac and/or ble.battery_sense.mac)"
+            )
         if self.cfg.ble_mac and not self.cfg.ble_key:
             raise ValueError("BLE source needs an encryption key (ble.key_file)")
+        if self.cfg.ble_battery_sense_mac and not self.cfg.ble_battery_sense_key:
+            raise ValueError(
+                "Smart Battery Sense needs an encryption key (ble.battery_sense.key_file)"
+            )
+
+        from bleak import BleakScanner
 
         def on_advert(device, adv) -> None:
-            addr = device.address.upper()
-            route = routes.get(addr)
-            if route is None:
-                return
-            key, mapper, writer = route
             raw = adv.manufacturer_data.get(VICTRON_MFG_ID)
-            if not raw or raw[0] != INSTANT_READOUT_PREFIX:
-                return  # ignore the non-Instant-Readout record the device also emits
-            now = time.time()
-            if now - self._last.get(addr, 0.0) < self.cfg.live_interval_s:
-                return
-            cls = detect_device_type(raw)
-            if cls is None:
-                return
-            try:
-                fields = mapper(cls(key).parse(raw))
-            except Exception:  # pragma: no cover - decrypt/parse guard
-                log.exception("BLE decode failed")
-                return
-            if fields:
-                writer(fields)
-                self._last[addr] = now
+            self._handle_advert(device.address.upper(), raw, time.time(), routes)
 
         scanner = BleakScanner(detection_callback=on_advert)
         macs = ", ".join(routes)

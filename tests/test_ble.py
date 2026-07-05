@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from enum import Enum
 
-from vedirect_influx.ble import battery_sense_fields, solar_fields
+import pytest
+
+from vedirect_influx.ble import (
+    INSTANT_READOUT_PREFIX,
+    BleReader,
+    battery_sense_fields,
+    solar_fields,
+)
 from vedirect_influx.config import Config
 
 
@@ -177,6 +184,120 @@ def test_routes_include_battery_sense_when_configured():
     _, mapper, writer = routes["11:22:33:44:55:66"]
     assert mapper is battery_sense_fields
     assert writer == sink.write_battery
+
+
+class RecordingSink:
+    """Records write_live / write_battery calls for dispatch tests."""
+
+    def __init__(self):
+        self.live = []
+        self.battery = []
+
+    def write_live(self, f):
+        self.live.append(f)
+
+    def write_battery(self, f):
+        self.battery.append(f)
+
+
+class FakeCls:
+    """Stand-in for a victron-ble device class: FakeCls(key).parse(raw) -> data."""
+
+    def __init__(self, key):
+        self.key = key
+
+    def parse(self, raw):
+        return FakeSolarData()
+
+
+def _bs_bytes():
+    return bytes([INSTANT_READOUT_PREFIX, 0x00, 0x01, 0x02])
+
+
+def test_handle_advert_charger_writes_live(monkeypatch):
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+    r._handle_advert("AA:BB:CC:DD:EE:FF", _bs_bytes(), 100.0, routes)
+    assert sink.battery == []
+    assert len(sink.live) == 1
+    assert sink.live[0]["battery_voltage"] == 13.38  # mapped via solar_fields
+
+
+def test_handle_advert_battery_sense_writes_battery(monkeypatch):
+    class FakeBsCls:
+        def __init__(self, key):
+            self.key = key
+
+        def parse(self, raw):
+            return FakeBatterySenseData()
+
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeBsCls)
+    sink = RecordingSink()
+    cfg = Config(
+        ble_battery_sense_mac="11:22:33:44:55:66",
+        ble_battery_sense_key_file="/dev/null",
+    )
+    r = BleReader(cfg, sink)
+    routes = r._routes()
+    r._handle_advert("11:22:33:44:55:66", _bs_bytes(), 100.0, routes)
+    assert sink.live == []
+    assert sink.battery == [{"temperature_c": 21.5, "battery_voltage": 13.28}]
+
+
+def test_handle_advert_unknown_mac_ignored(monkeypatch):
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+    r._handle_advert("99:99:99:99:99:99", _bs_bytes(), 100.0, routes)
+    assert sink.live == [] and sink.battery == []
+
+
+def test_handle_advert_non_prefix_ignored(monkeypatch):
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+    r._handle_advert("AA:BB:CC:DD:EE:FF", bytes([0x00, 0x01]), 100.0, routes)
+    assert sink.live == []
+
+
+def test_handle_advert_throttled_within_interval(monkeypatch):
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    cfg = Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null", live_interval_s=15)
+    r = BleReader(cfg, sink)
+    routes = r._routes()
+    r._handle_advert("AA:BB:CC:DD:EE:FF", _bs_bytes(), 100.0, routes)
+    r._handle_advert("AA:BB:CC:DD:EE:FF", _bs_bytes(), 110.0, routes)  # within 15s
+    assert len(sink.live) == 1  # second advert throttled
+    r._handle_advert("AA:BB:CC:DD:EE:FF", _bs_bytes(), 120.0, routes)  # past interval
+    assert len(sink.live) == 2
+
+
+def test_run_raises_when_no_devices_configured():
+    import asyncio
+
+    r = BleReader(Config(source="ble"), sink=RecordingSink())
+    with pytest.raises(ValueError, match="no devices configured"):
+        asyncio.run(r._run())
+
+
+def test_run_raises_when_battery_sense_key_missing(tmp_path):
+    import asyncio
+
+    keyf = tmp_path / "charger_key.txt"
+    keyf.write_text("dummy-key\n")  # charger key present so its guard passes first
+    cfg = Config(
+        ble_mac="AA:BB:CC:DD:EE:FF",
+        ble_key_file=str(keyf),
+        ble_battery_sense_mac="11:22:33:44:55:66",
+    )  # battery_sense mac set, no key_file -> empty key
+    r = BleReader(cfg, sink=RecordingSink())
+    with pytest.raises(ValueError, match="Smart Battery Sense needs an encryption key"):
+        asyncio.run(r._run())
 
 
 def test_make_reader_selects_by_source():
