@@ -127,6 +127,11 @@ class BleReader:
             )
         return routes
 
+    def _on_advert(self, device, adv, routes: dict) -> None:
+        """Bridge a bleak advert to :meth:`_handle_advert` (extract Victron mfg data)."""
+        raw = adv.manufacturer_data.get(VICTRON_MFG_ID)
+        self._handle_advert(device.address.upper(), raw, time.time(), routes)
+
     def _handle_advert(self, addr: str, raw: bytes | None, now: float, routes: dict) -> None:
         """Dispatch one advert: route by MAC, guard prefix + throttle, decode, write."""
         route = routes.get(addr)
@@ -164,11 +169,7 @@ class BleReader:
 
         from bleak import BleakScanner
 
-        def on_advert(device, adv) -> None:
-            raw = adv.manufacturer_data.get(VICTRON_MFG_ID)
-            self._handle_advert(device.address.upper(), raw, time.time(), routes)
-
-        scanner = BleakScanner(detection_callback=on_advert)
+        scanner = BleakScanner(detection_callback=lambda d, a: self._on_advert(d, a, routes))
         macs = ", ".join(routes)
         log.info("BLE: scanning Instant Readout from %s", macs)
         while True:

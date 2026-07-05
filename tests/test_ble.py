@@ -277,6 +277,42 @@ def test_handle_advert_throttled_within_interval(monkeypatch):
     assert len(sink.live) == 2
 
 
+def test_on_advert_extracts_mfg_data_and_dispatches(monkeypatch):
+    # Covers the bleak bridge: pull VICTRON_MFG_ID off adv, upper-case the address.
+    from vedirect_influx.ble import VICTRON_MFG_ID
+
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+
+    class FakeDevice:
+        address = "aa:bb:cc:dd:ee:ff"  # lower-case -> must be upper-cased to match
+
+    class FakeAdv:
+        manufacturer_data = {VICTRON_MFG_ID: _bs_bytes()}
+
+    r._on_advert(FakeDevice(), FakeAdv(), routes)
+    assert len(sink.live) == 1
+    assert sink.live[0]["battery_voltage"] == 13.38
+
+
+def test_on_advert_no_victron_mfg_data_ignored(monkeypatch):
+    monkeypatch.setattr("vedirect_influx.ble.detect_device_type", lambda raw: FakeCls)
+    sink = RecordingSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+
+    class FakeDevice:
+        address = "AA:BB:CC:DD:EE:FF"
+
+    class FakeAdv:
+        manufacturer_data: dict = {}  # no Victron record -> raw is None
+
+    r._on_advert(FakeDevice(), FakeAdv(), routes)
+    assert sink.live == []
+
+
 def test_run_raises_when_no_devices_configured():
     import asyncio
 
