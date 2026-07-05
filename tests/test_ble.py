@@ -143,6 +143,42 @@ def test_battery_measurement_defaults():
     assert Config().ble_battery_sense_key == ""  # no key file -> empty
 
 
+def test_routes_charger_only_by_default():
+    from vedirect_influx.ble import BleReader, solar_fields
+
+    class FakeSink:
+        def write_live(self, f): ...
+        def write_battery(self, f): ...
+
+    sink = FakeSink()
+    r = BleReader(Config(ble_mac="AA:BB:CC:DD:EE:FF", ble_key_file="/dev/null"), sink)
+    routes = r._routes()
+    assert set(routes) == {"AA:BB:CC:DD:EE:FF"}
+    key, mapper, writer = routes["AA:BB:CC:DD:EE:FF"]
+    assert mapper is solar_fields
+    assert writer == sink.write_live
+
+
+def test_routes_include_battery_sense_when_configured():
+    from vedirect_influx.ble import BleReader, battery_sense_fields
+
+    class FakeSink:
+        def write_live(self, f): ...
+        def write_battery(self, f): ...
+
+    sink = FakeSink()
+    cfg = Config(
+        ble_mac="aa:bb:cc:dd:ee:ff",
+        ble_battery_sense_mac="11:22:33:44:55:66",
+    )
+    routes = BleReader(cfg, sink)._routes()
+    # keys are upper-cased for case-insensitive advert matching
+    assert set(routes) == {"AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"}
+    _, mapper, writer = routes["11:22:33:44:55:66"]
+    assert mapper is battery_sense_fields
+    assert writer == sink.write_battery
+
+
 def test_make_reader_selects_by_source():
     from vedirect_influx.ble import BleReader
     from vedirect_influx.cli import make_reader

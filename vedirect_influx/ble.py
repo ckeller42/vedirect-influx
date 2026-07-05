@@ -92,44 +92,64 @@ class BleReader:
     def __init__(self, config, sink) -> None:
         self.cfg = config
         self.sink = sink
-        self._last_live = 0.0
+        self._last: dict[str, float] = {}
 
     def run(self) -> None:
         """Run the BLE scan loop forever (blocking)."""
         asyncio.run(self._run())
 
+    def _routes(self) -> dict:
+        """MAC (upper-case) -> (encryption key, field mapper, sink writer)."""
+        routes: dict = {}
+        if self.cfg.ble_mac:
+            routes[self.cfg.ble_mac.upper()] = (
+                self.cfg.ble_key,
+                solar_fields,
+                self.sink.write_live,
+            )
+        if self.cfg.ble_battery_sense_mac:
+            routes[self.cfg.ble_battery_sense_mac.upper()] = (
+                self.cfg.ble_battery_sense_key,
+                battery_sense_fields,
+                self.sink.write_battery,
+            )
+        return routes
+
     async def _run(self) -> None:
         from bleak import BleakScanner
         from victron_ble.devices import detect_device_type
 
-        key = self.cfg.ble_key
-        if not key:
-            raise ValueError("BLE source needs an encryption key (set vrm? no: ble.key_file)")
-        mac = self.cfg.ble_mac.upper()
+        routes = self._routes()
+        if self.cfg.ble_mac and not self.cfg.ble_key:
+            raise ValueError("BLE source needs an encryption key (ble.key_file)")
 
         def on_advert(device, adv) -> None:
-            if device.address.upper() != mac:
+            addr = device.address.upper()
+            route = routes.get(addr)
+            if route is None:
                 return
+            key, mapper, writer = route
             raw = adv.manufacturer_data.get(VICTRON_MFG_ID)
             if not raw or raw[0] != INSTANT_READOUT_PREFIX:
                 return  # ignore the non-Instant-Readout record the device also emits
             now = time.time()
-            if now - self._last_live < self.cfg.live_interval_s:
+            if now - self._last.get(addr, 0.0) < self.cfg.live_interval_s:
                 return
             cls = detect_device_type(raw)
             if cls is None:
                 return
             try:
-                fields = solar_fields(cls(key).parse(raw))
+                fields = mapper(cls(key).parse(raw))
             except Exception:  # pragma: no cover - decrypt/parse guard
                 log.exception("BLE decode failed")
                 return
             if fields:
-                self.sink.write_live(fields)
-                self._last_live = now
+                writer(fields)
+                self._last[addr] = now
 
         scanner = BleakScanner(detection_callback=on_advert)
-        log.info("BLE: scanning Instant Readout from %s", mac)
+        macs = ", ".join(routes)
+        log.info("BLE: scanning Instant Readout from %s", macs)
         while True:
             try:
                 await scanner.start()
