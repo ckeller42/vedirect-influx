@@ -676,6 +676,55 @@
         }
       ],
       "description": "Daily highest/lowest battery voltage, derived from live `battery_voltage` samples (BLE)."
+    },
+    {
+      "id": 100,
+      "type": "timeseries",
+      "title": "Battery temperature",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "refId": "A",
+          "query": "from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn:(r)=>r._measurement==\"victron_battery\" and r._field==\"temperature_c\") |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+        }
+      ],
+      "description": "Battery temperature reported by the Victron Smart Battery Sense (BLE peripheral), stored in the `victron_battery` measurement."
     }
   ]
 }
