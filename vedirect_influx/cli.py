@@ -76,6 +76,7 @@ def build_sinks(cfg: Config) -> list[Sink]:
                 bucket=cfg.influx_bucket,
                 live_measurement=cfg.live_measurement,
                 history_measurement=cfg.history_measurement,
+                battery_measurement=cfg.battery_measurement,
                 tags=cfg.tags,
             )
         )

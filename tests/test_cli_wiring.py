@@ -68,3 +68,19 @@ def test_vreg_ipc_config_loaded(tmp_path):
     cfg = Config.load(str(cfg_file))
     assert cfg.vreg_ipc_enabled is True
     assert cfg.vreg_ipc_socket == "/tmp/x.sock"
+
+
+def test_build_sinks_passes_battery_measurement(monkeypatch):
+    import vedirect_influx.cli as cli
+
+    captured = {}
+
+    class FakeInflux:
+        def __init__(self, **kw):
+            captured.update(kw)
+
+    monkeypatch.setattr("vedirect_influx.sinks.influx.InfluxDBSink", FakeInflux)
+    monkeypatch.setenv("INFLUXDB_TOKEN", "tok")
+    cfg = Config(sink_type="influxdb", battery_measurement="victron_battery")
+    cli.build_sinks(cfg)
+    assert captured["battery_measurement"] == "victron_battery"

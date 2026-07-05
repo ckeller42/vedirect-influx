@@ -18,6 +18,8 @@ class Config:
     # BLE source (when source == "ble"); the encryption key lives in a 0600 file, not here
     ble_mac: str = ""
     ble_key_file: str = ""
+    ble_battery_sense_mac: str = ""
+    ble_battery_sense_key_file: str = ""
     live_interval_s: int = 15
     history_enabled: bool = True
     history_poll_on_start: bool = True
@@ -29,6 +31,7 @@ class Config:
     influx_token_env: str = "INFLUXDB_TOKEN"  # env var holding the token
     live_measurement: str = "victron_mppt"
     history_measurement: str = "victron_history_daily"
+    battery_measurement: str = "victron_battery"
     tags: dict = field(default_factory=dict)
     # VRM Portal (optional; uploaded *in addition* to the primary sink)
     vrm_enabled: bool = False
@@ -56,6 +59,14 @@ class Config:
         """Victron Instant Readout encryption key, read from ``ble_key_file`` (0600)."""
         if self.ble_key_file and os.path.exists(self.ble_key_file):
             with open(self.ble_key_file) as f:
+                return f.read().strip()
+        return ""
+
+    @property
+    def ble_battery_sense_key(self) -> str:
+        """Smart Battery Sense Instant Readout key, read from its 0600 key file."""
+        if self.ble_battery_sense_key_file and os.path.exists(self.ble_battery_sense_key_file):
+            with open(self.ble_battery_sense_key_file) as f:
                 return f.read().strip()
         return ""
 
@@ -88,12 +99,15 @@ class Config:
             vrm = raw.get("vrm", {})
             vreg = raw.get("vreg", {})
             ble = raw.get("ble", {})
+            ble_bs = ble.get("battery_sense", {})
             data = dict(
                 source=raw.get("source", cls.source),
                 port=serial.get("port", cls.port),
                 baud=serial.get("baud", cls.baud),
                 ble_mac=ble.get("mac", cls.ble_mac),
                 ble_key_file=ble.get("key_file", cls.ble_key_file),
+                ble_battery_sense_mac=ble_bs.get("mac", cls.ble_battery_sense_mac),
+                ble_battery_sense_key_file=ble_bs.get("key_file", cls.ble_battery_sense_key_file),
                 live_interval_s=raw.get("live_interval_s", cls.live_interval_s),
                 history_enabled=hist.get("enabled", cls.history_enabled),
                 history_poll_on_start=hist.get("poll_on_start", cls.history_poll_on_start),
@@ -105,6 +119,7 @@ class Config:
                 influx_token_env=sink.get("token_env", cls.influx_token_env),
                 live_measurement=sink.get("live_measurement", cls.live_measurement),
                 history_measurement=sink.get("history_measurement", cls.history_measurement),
+                battery_measurement=sink.get("battery_measurement", cls.battery_measurement),
                 tags=sink.get("tags", {}),
                 vrm_enabled=vrm.get("enabled", cls.vrm_enabled),
                 vrm_iface=vrm.get("iface", cls.vrm_iface),

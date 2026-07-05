@@ -187,6 +187,31 @@ service. The charger broadcasts AES-encrypted adverts decoded with your key (pas
 > `max_power`, `tracker_mode`, or the on-device **daily history** — those need VE.Direct (USB).
 > Daily yield can be derived in Grafana from the logged `yield_today`.
 
+### Optional: Smart Battery Sense (BLE)
+
+If you have a [Victron Smart Battery Sense](https://www.victronenergy.com/accessories/smart-battery-sense),
+add its MAC and Instant Readout key alongside the charger's:
+
+```yaml
+source: ble
+ble:
+  mac: AA:BB:CC:DD:EE:FF          # SmartSolar charger
+  key_file: /etc/vedirect-influx/charger.key
+  battery_sense:                  # optional: Victron Smart Battery Sense
+    mac: 11:22:33:44:55:66
+    key_file: /etc/vedirect-influx/batterysense.key
+sink:
+  battery_measurement: victron_battery   # temperature_c + battery_voltage land here
+```
+
+The Smart Battery Sense is a **separate BLE peripheral** — it has its own MAC address and its own
+Instant Readout encryption key, obtained the same way as the charger's (VictronConnect → device →
+⚙ → Product info → "Instant readout via Bluetooth" → **Show**). It reports battery temperature
+(stored as `temperature_c`, in Celsius) and battery voltage into the `victron_battery` measurement,
+read **concurrently** with the charger by the same BLE scanner. The current scanner supports at most
+two BLE devices (charger + Battery Sense); see [#22](https://github.com/ckeller42/vedirect-influx/issues/22)
+for tracking support for reading more than two.
+
 ## Victron VRM Portal (direct, no Venus OS)
 
 Optionally upload the same data to the [VRM Portal](https://vrm.victronenergy.com) and the

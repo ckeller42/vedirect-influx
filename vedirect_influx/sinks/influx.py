@@ -21,6 +21,7 @@ class InfluxDBSink(Sink):
         bucket: str,
         live_measurement: str = "victron_mppt",
         history_measurement: str = "victron_history_daily",
+        battery_measurement: str = "victron_battery",
         tags: dict | None = None,
     ) -> None:
         self._client = InfluxDBClient(url=url, token=token, org=org)
@@ -29,6 +30,7 @@ class InfluxDBSink(Sink):
         self._bucket = bucket
         self._live_m = live_measurement
         self._hist_m = history_measurement
+        self._batt_m = battery_measurement
         self._tags = tags or {}
 
     def _point(self, measurement: str) -> Point:
@@ -66,6 +68,15 @@ class InfluxDBSink(Sink):
         self._add_fields(p, fields)
         # timestamp at the day's midnight UTC -> idempotent re-writes per day
         p.time(datetime.combine(day, time.min, tzinfo=timezone.utc))
+        self._write.write(bucket=self._bucket, org=self._org, record=p)
+
+    def write_battery(self, fields: dict, ts: datetime | None = None) -> None:
+        if not fields:
+            return
+        p = self._point(self._batt_m)
+        self._add_fields(p, fields)
+        if ts:
+            p.time(ts)
         self._write.write(bucket=self._bucket, org=self._org, record=p)
 
     def close(self) -> None:

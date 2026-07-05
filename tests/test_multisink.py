@@ -12,7 +12,7 @@ class RecordingSink(Sink):
     """Sink that records calls; optionally raises on write to test isolation."""
 
     def __init__(self, raises=False):
-        self.live, self.history, self.closed = [], [], False
+        self.live, self.history, self.battery, self.closed = [], [], [], False
         self._raises = raises
 
     def write_live(self, fields, ts=None):
@@ -24,6 +24,11 @@ class RecordingSink(Sink):
         if self._raises:
             raise RuntimeError("boom")
         self.history.append((fields, day))
+
+    def write_battery(self, fields, ts=None):
+        if self._raises:
+            raise RuntimeError("boom")
+        self.battery.append((fields, ts))
 
     def close(self):
         self.closed = True
@@ -55,3 +60,28 @@ def test_close_closes_all_even_if_one_raises():
     bad, good = BadClose(), RecordingSink()
     MultiSink([bad, good]).close()
     assert good.closed is True
+
+
+def test_write_battery_fans_out():
+    a, b = RecordingSink(), RecordingSink()
+    m = MultiSink([a, b])
+    m.write_battery({"temperature_c": 21.5})
+    assert a.battery == b.battery == [({"temperature_c": 21.5}, None)]
+
+
+def test_write_battery_one_failing_sink_does_not_block_others():
+    bad, good = RecordingSink(raises=True), RecordingSink()
+    MultiSink([bad, good]).write_battery({"temperature_c": 21.5})  # must not raise
+    assert good.battery == [({"temperature_c": 21.5}, None)]
+
+
+def test_base_sink_write_battery_is_optional_noop():
+    # A sink that does not override write_battery inherits a no-op (like close()).
+    class MinimalSink(Sink):
+        def write_live(self, fields, ts=None):
+            pass
+
+        def write_history_day(self, fields, day):
+            pass
+
+    MinimalSink().write_battery({"temperature_c": 21.5})  # must not raise

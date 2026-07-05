@@ -15,3 +15,6 @@ class StdoutSink(Sink):
 
     def write_history_day(self, fields: dict, day: date) -> None:
         print(f"HIST {day} {fields}")
+
+    def write_battery(self, fields: dict, ts: datetime | None = None) -> None:
+        print(f"BATT {fields}")

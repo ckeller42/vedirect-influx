@@ -34,6 +34,13 @@ class MultiSink(Sink):
             except Exception:
                 log.exception("sink %s failed on write_history_day", type(s).__name__)
 
+    def write_battery(self, fields: dict, ts: datetime | None = None) -> None:
+        for s in self._sinks:
+            try:
+                s.write_battery(fields, ts)
+            except Exception:
+                log.exception("sink %s failed on write_battery", type(s).__name__)
+
     def close(self) -> None:
         for s in self._sinks:
             try:
