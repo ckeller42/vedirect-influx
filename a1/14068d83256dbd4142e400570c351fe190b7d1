@@ -1,0 +1,21 @@
+tests/test_ble.py
+  s_bf3f070fb9cf3c::t_bf85c99d65c1a0 7-14,189-302
+vedirect_influx/ble.py
+  s_bf3f070fb9cf3c::t_5ba19289c1936b 28-39,130-150,152,154-157,160-165,169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a114068d83256dbd4142e400570c351fe190b7d1",
+  "prompts": {},
+  "sessions": {
+    "s_bf3f070fb9cf3c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2e48dd337a7b8036",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
