@@ -1,0 +1,19 @@
+deploy/grafana-victron-ble.json
+  s_718c7d0e200ac8::t_eb3b27989fdd1f 679-727
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5006342bc8cfa3ec9b287ae6edc356dfefc31db2",
+  "prompts": {},
+  "sessions": {
+    "s_718c7d0e200ac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0d22fe48f2c89848",
+        "model": "unknown"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
