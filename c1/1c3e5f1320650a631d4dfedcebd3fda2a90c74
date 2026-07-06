@@ -1,0 +1,42 @@
+vedirect_influx/config.py
+  s_35ed1c0106164e::t_71e461d80270b5 36-38
+  s_35ed1c0106164e::t_ce7e97beab9c58 127
+vedirect_influx/ble.py
+  s_35ed1c0106164e::t_86ee6c9014d57e 1,3-8
+  s_35ed1c0106164e::t_2d4cd6325468f7 104
+vedirect_influx/sinks/influx.py
+  s_35ed1c0106164e::t_f69fedd9a659d6 26,36-38,40,42
+  s_35ed1c0106164e::t_4083d66e7ea7d3 80
+deploy/config.example.yaml
+  s_35ed1c0106164e::t_4f19004fc935b2 12-16
+  s_35ed1c0106164e::t_98ab37f4593469 30,33-34
+.gitignore
+  s_35ed1c0106164e::t_824ad5222fd924 11
+tests/test_influx.py
+  s_35ed1c0106164e::t_a23a595e5027c3 1-62
+vedirect_influx/cli.py
+  s_35ed1c0106164e::t_cf6de825448400 81
+README.md
+  s_35ed1c0106164e::t_4141a7050a7d21 170-172
+  s_35ed1c0106164e::t_18bc5cff1de33a 215-217,228-230
+  s_35ed1c0106164e::t_0434628d2fd230 155-156
+  s_35ed1c0106164e::t_679569008988ba 50,56-57,59-60
+  s_35ed1c0106164e::t_049678bf74fdd9 38-39
+  s_35ed1c0106164e::t_7acd9b0b1f8c8a 231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c11c3e5f1320650a631d4dfedcebd3fda2a90c74",
+  "prompts": {},
+  "sessions": {
+    "s_35ed1c0106164e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d5c6c95f-8aef-4a7e-bf44-0b9067f85792",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Christoph Keller <christoph.keller@gmx.net>"
+    }
+  }
+}
