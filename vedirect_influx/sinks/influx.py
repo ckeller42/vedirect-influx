@@ -23,6 +23,7 @@ class InfluxDBSink(Sink):
         history_measurement: str = "victron_history_daily",
         battery_measurement: str = "victron_battery",
         tags: dict | None = None,
+        battery_tags: dict | None = None,
     ) -> None:
         self._client = InfluxDBClient(url=url, token=token, org=org)
         self._write = self._client.write_api(write_options=SYNCHRONOUS)
@@ -32,10 +33,13 @@ class InfluxDBSink(Sink):
         self._hist_m = history_measurement
         self._batt_m = battery_measurement
         self._tags = tags or {}
+        # Battery measurement tags override the global ones (e.g. a distinct `device`),
+        # so Battery Sense data isn't tagged as the charger. Empty -> just the globals.
+        self._batt_tags = {**self._tags, **(battery_tags or {})}
 
-    def _point(self, measurement: str) -> Point:
+    def _point(self, measurement: str, tags: dict | None = None) -> Point:
         p = Point(measurement)
-        for k, v in self._tags.items():
+        for k, v in (self._tags if tags is None else tags).items():
             p.tag(k, v)
         return p
 
@@ -73,7 +77,7 @@ class InfluxDBSink(Sink):
     def write_battery(self, fields: dict, ts: datetime | None = None) -> None:
         if not fields:
             return
-        p = self._point(self._batt_m)
+        p = self._point(self._batt_m, self._batt_tags)
         self._add_fields(p, fields)
         if ts:
             p.time(ts)

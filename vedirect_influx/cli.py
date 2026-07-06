@@ -78,6 +78,7 @@ def build_sinks(cfg: Config) -> list[Sink]:
                 history_measurement=cfg.history_measurement,
                 battery_measurement=cfg.battery_measurement,
                 tags=cfg.tags,
+                battery_tags=cfg.battery_tags,
             )
         )
     else:

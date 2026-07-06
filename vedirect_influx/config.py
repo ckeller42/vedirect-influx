@@ -33,6 +33,9 @@ class Config:
     history_measurement: str = "victron_history_daily"
     battery_measurement: str = "victron_battery"
     tags: dict = field(default_factory=dict)
+    # Extra tags for the battery measurement, merged over `tags` (battery wins). Lets the
+    # Battery Sense carry its own e.g. `device` tag instead of inheriting the charger's.
+    battery_tags: dict = field(default_factory=dict)
     # VRM Portal (optional; uploaded *in addition* to the primary sink)
     vrm_enabled: bool = False
     vrm_iface: str = "eth0"
@@ -121,6 +124,7 @@ class Config:
                 history_measurement=sink.get("history_measurement", cls.history_measurement),
                 battery_measurement=sink.get("battery_measurement", cls.battery_measurement),
                 tags=sink.get("tags", {}),
+                battery_tags=sink.get("battery_tags", {}),
                 vrm_enabled=vrm.get("enabled", cls.vrm_enabled),
                 vrm_iface=vrm.get("iface", cls.vrm_iface),
                 vrm_portal_id=vrm.get("portal_id", cls.vrm_portal_id),

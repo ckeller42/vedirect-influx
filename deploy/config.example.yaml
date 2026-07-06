@@ -9,6 +9,11 @@ serial:
 ble:
   mac: ""                 # e.g. DA:4B:25:C4:61:34
   key_file: /etc/vedirect-influx/ble_key.txt
+  # Optional Victron Smart Battery Sense (a separate BLE device: battery temperature + voltage
+  # -> the `battery_measurement` below). Its own MAC + Instant Readout key.
+  # battery_sense:
+  #   mac: ""
+  #   key_file: /etc/vedirect-influx/batterysense_key.txt
 live_interval_s: 15
 history:
   enabled: true
@@ -22,8 +27,11 @@ sink:
   token_env: INFLUXDB_TOKEN   # token read from this env var (never in the file)
   live_measurement: victron_mppt
   history_measurement: victron_history_daily
+  battery_measurement: victron_battery   # only used with a Smart Battery Sense (see ble.battery_sense)
   tags:
     device: mppt-75-15
+  # battery_tags:            # optional: tags for victron_battery only, merged over `tags` (these win),
+  #   device: battery-sense  # so the Battery Sense isn't labelled as the charger
 
 # Optional: also upload to the Victron VRM Portal (no Venus OS). Runs alongside the
 # sink above. Register first: `vedirect-influx -c config.yaml vrm-register`. See docs/VRM.md.

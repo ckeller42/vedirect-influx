@@ -35,6 +35,8 @@ Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 - Optional **Victron VRM Portal** upload — direct, **no Venus OS** ([see below](#victron-vrm-portal-direct-no-venus-os))
 - Optional **Bluetooth source** — read a SmartSolar over BLE *Instant Readout* (no VE.Direct cable);
   set `source: ble` ([see below](#bluetooth-source-instant-readout))
+- Optional **Smart Battery Sense** (BLE) — log battery **temperature** + voltage alongside the charger
+  ([see below](#optional-smart-battery-sense-ble))
 - Config via YAML; secrets via env var / file (never in the repo)
 - Ships a portable Grafana dashboard ([`deploy/grafana-victron.json`](deploy/grafana-victron.json))
 
@@ -45,14 +47,17 @@ flowchart LR
     MPPT["Victron MPPT\n(VE.Direct)"] -->|USB FTDI\n19200 8N1| DEV["/dev/victron"]
     DEV --> R
 
-    subgraph R["SerialReader (single owner of the port)"]
+    subgraph R["SerialReader — source: serial (single owner of the port)"]
         direction TB
         T["TextFrameParser\n(live telemetry)"]
         H["HEX history poller\nGet 0x1050 + days_ago"]
     end
 
+    BLE["SmartSolar + optional\nSmart Battery Sense"] -. "source: ble\n(Instant Readout)" .-> BR["BleReader\ndispatch by MAC"]
+
     R --> M["MultiSink (fan-out)"]
-    M --> I[("InfluxDB\nvictron_mppt\nvictron_history_daily")]
+    BR -.-> M
+    M --> I[("InfluxDB\nvictron_mppt\nvictron_history_daily\nvictron_battery")]
     I --> G["Grafana"]
     M -. optional .-> V["VrmSink"]
     V -->|"HTTPS POST log.php"| VRM["VRM Portal\n& Victron app"]
@@ -147,6 +152,8 @@ sudo systemctl enable --now vedirect-influx
   `charge_state`, `tracker_mode`, `error_code`, `yield_today_kwh`, `load_on`, …
 - `victron_history_daily` (one point per day at midnight UTC): `yield_kwh`, `max_power_w`,
   `max_battery_v`, `min_battery_v`, `day_seq`.
+- `victron_battery` (live, only with an optional [Smart Battery Sense](#optional-smart-battery-sense-ble)):
+  `temperature_c` (Celsius), `battery_voltage`.
 
 ## Grafana
 
@@ -159,6 +166,9 @@ Two ready-to-import dashboards — pick the one matching your source, and select
   layout, but the daily-history panels are **derived in Flux** from the logged live
   `victron_mppt` samples (daily yield = max of cumulative `yield_today_kwh` per local day; max
   PV power and battery min/max from the live stream), since BLE carries no history register.
+
+Both dashboards include a **battery-temperature** panel (`victron_battery.temperature_c`); it stays
+empty unless you run a [Smart Battery Sense](#optional-smart-battery-sense-ble).
 
 ## Bluetooth source (Instant Readout)
 
@@ -202,6 +212,9 @@ ble:
     key_file: /etc/vedirect-influx/batterysense.key
 sink:
   battery_measurement: victron_battery   # temperature_c + battery_voltage land here
+  # battery_tags:                         # optional: tags for victron_battery only,
+  #   device: battery-sense               # merged over `tags` (these win) so the Sense
+  #                                        # isn't labelled as the charger
 ```
 
 The Smart Battery Sense is a **separate BLE peripheral** — it has its own MAC address and its own
@@ -211,6 +224,10 @@ Instant Readout encryption key, obtained the same way as the charger's (VictronC
 read **concurrently** with the charger by the same BLE scanner. The current scanner supports at most
 two BLE devices (charger + Battery Sense); see [#22](https://github.com/ckeller42/vedirect-influx/issues/22)
 for tracking support for reading more than two.
+
+By default `victron_battery` inherits the global `sink.tags` (so it carries the same `device` tag as
+the charger). Set `sink.battery_tags` to give it its own — e.g. `device: battery-sense` — merged over
+the globals so only the overlapping keys change.
 
 ## Victron VRM Portal (direct, no Venus OS)
 
