@@ -8,3 +8,4 @@ dist/
 
 # local dev tools
 /actionlint
+uv.lock

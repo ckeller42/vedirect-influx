@@ -1,9 +1,11 @@
-"""Read a Victron SmartSolar over Bluetooth (Instant Readout) instead of VE.Direct USB.
+"""Read Victron devices over Bluetooth (Instant Readout) instead of the VE.Direct USB cable.
 
-The charger broadcasts AES-encrypted "Instant Readout" BLE advertisements; with the
-device's encryption key they decode to live values. ``solar_fields`` maps the decoded
-data onto the same field names the VE.Direct text reader uses, so the existing sinks /
-dashboards keep working. ``BleReader`` is the BLE counterpart to ``SerialReader``.
+Each device broadcasts AES-encrypted "Instant Readout" BLE advertisements; with its
+encryption key they decode to live values. ``BleReader`` runs a single scanner and
+dispatches adverts by MAC: the SmartSolar charger via ``solar_fields`` (mapped onto the
+same field names the VE.Direct text reader uses, so existing sinks / dashboards keep
+working), and an optional Smart Battery Sense via ``battery_sense_fields``. ``BleReader``
+is the BLE counterpart to ``SerialReader``.
 
 Instant Readout carries a live subset only — no ``pv_voltage``, lifetime ``yield_total``,
 ``max_power``, ``tracker_mode``, or the on-device daily history (those need VE.Direct).
@@ -99,7 +101,7 @@ def battery_sense_fields(data) -> dict:
 
 
 class BleReader:
-    """Scan the charger's Instant Readout adverts and push live frames to the sink."""
+    """Scan Instant Readout adverts and dispatch each by MAC (charger + Battery Sense)."""
 
     def __init__(self, config, sink) -> None:
         self.cfg = config
