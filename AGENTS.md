@@ -152,10 +152,10 @@ prints `OK` (no placeholders left). On `SOURCE=ble`, also
 
 ## 5. Smoke test (read history once) — `SOURCE=serial` only
 
-**Skip this step on `SOURCE=ble`.** `--history-once` always opens the serial port
-(`serial.port`), whatever `source` says, and BLE Instant Readout carries no history registers
-— on a BLE-only Pi it fails because there is no `/dev/victron`. Step 6's log line is the BLE
-smoke test.
+**Skip this step on `SOURCE=ble`.** BLE Instant Readout carries no history registers, so on a
+`source: ble` config `--history-once` refuses to run: it exits non-zero with `history-once needs
+source: serial …; BLE Instant Readout carries no daily history`, before opening any serial
+device. Step 6's log line is the BLE smoke test.
 
 Stop any process holding the port first; only one process may own `/dev/victron`.
 

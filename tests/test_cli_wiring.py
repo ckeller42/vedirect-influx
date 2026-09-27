@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from vedirect_influx.cli import build_sinks
 from vedirect_influx.config import Config
 from vedirect_influx.sinks.stdout import StdoutSink
@@ -84,3 +86,64 @@ def test_build_sinks_passes_battery_measurement(monkeypatch):
     cfg = Config(sink_type="influxdb", battery_measurement="victron_battery")
     cli.build_sinks(cfg)
     assert captured["battery_measurement"] == "victron_battery"
+
+
+def _ble_config(tmp_path):
+    cfg_file = tmp_path / "c.yaml"
+    cfg_file.write_text("source: ble\nsink:\n  type: stdout\nble:\n  mac: DA:4B:25:C4:61:34\n")
+    return str(cfg_file)
+
+
+def _forbid_serial_and_sinks(monkeypatch):
+    import vedirect_influx.cli as cli
+
+    def boom(*a, **kw):
+        raise AssertionError("history-once on BLE must fail before touching serial/sinks")
+
+    monkeypatch.setattr(cli, "SerialReader", boom)
+    monkeypatch.setattr(cli, "make_sink", boom)
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["history-once"], ["--history-once"], ["run", "--history-once"]],
+    ids=["command", "flag", "run-plus-flag"],
+)
+def test_history_once_on_ble_fails_fast(tmp_path, monkeypatch, argv):
+    from vedirect_influx.cli import main
+
+    _forbid_serial_and_sinks(monkeypatch)
+    with pytest.raises(SystemExit) as exc:
+        main([*argv, "--config", _ble_config(tmp_path)])
+    msg = str(exc.value.code)
+    assert exc.value.code != 0 and isinstance(exc.value.code, str)
+    assert "history-once needs source: serial" in msg
+    assert "BLE Instant Readout carries no daily history" in msg
+
+
+def test_history_once_on_serial_still_polls(tmp_path, monkeypatch, capsys):
+    import vedirect_influx.cli as cli
+
+    calls = []
+
+    class FakeSink:
+        def close(self):
+            calls.append("close")
+
+    class FakeReader:
+        def __init__(self, cfg, sink):
+            calls.append("init")
+
+        def _open(self):
+            calls.append("open")
+
+        def poll_history(self):
+            return 3
+
+    monkeypatch.setattr(cli, "make_sink", lambda cfg: FakeSink())
+    monkeypatch.setattr(cli, "SerialReader", FakeReader)
+    cfg_file = tmp_path / "c.yaml"
+    cfg_file.write_text("sink:\n  type: stdout\n")
+    cli.main(["history-once", "--config", str(cfg_file)])
+    assert calls == ["init", "open", "close"]
+    assert "wrote 3 day records" in capsys.readouterr().out

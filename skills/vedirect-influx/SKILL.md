@@ -41,8 +41,8 @@ Run `AGENTS.md` steps **1–7** in order, honouring each **Check** before procee
    BLE also set `source: ble`, `ble.mac`, `ble.key_file` (and optionally `ble.battery_sense.mac`
    / `.key_file`) and store the key file(s).
 5. Serial only: smoke test `--history-once` → expect `wrote N day records`. **Skip on BLE** —
-   `--history-once` always opens the serial port, whatever `source` says, and BLE carries no
-   history.
+   BLE carries no history, so on `source: ble` `--history-once` exits non-zero with
+   `history-once needs source: serial …` before opening any serial device.
 6. systemd service (`enable --now`) → `systemctl is-active` is `active`, logs show
    `opened /dev/victron @ 19200` (serial) or `BLE: scanning Instant Readout from <MAC>` (BLE).
 7. Verify live points land in InfluxDB (`LIVE_FIELDS > 0`); with a Battery Sense, also in
