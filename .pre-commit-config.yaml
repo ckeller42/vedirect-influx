@@ -12,8 +12,9 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
+  # Keep rev in step with the exact ruff pin in pyproject.toml's dev extra (what CI runs).
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.15
+    rev: v0.16.9
     hooks:
       - id: ruff
         args: [--fix]
