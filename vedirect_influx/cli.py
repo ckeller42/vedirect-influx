@@ -172,6 +172,13 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "history-once" or args.history_once:
+        if cfg.source == "ble":
+            # Checked before any sink or serial device is touched: BLE Instant Readout
+            # broadcasts live values only, so there is no daily history to read.
+            sys.exit(
+                "history-once needs source: serial (config has source: ble); "
+                "BLE Instant Readout carries no daily history"
+            )
         sink = make_sink(cfg)
         reader = SerialReader(cfg, sink)
         reader._open()

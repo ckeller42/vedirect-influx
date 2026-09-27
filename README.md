@@ -134,10 +134,11 @@ vedirect-influx --config config.yaml                  # run continuously (live +
 vedirect-influx -c config.yaml -v                     # verbose
 ```
 
-`--history-once` (and the `history-once` command) works over **VE.Direct serial only**: it always
-opens `serial.port`, regardless of `source`, and BLE Instant Readout has no history registers. On a
-`source: ble` setup, skip it and check the service log for `BLE: scanning Instant Readout from …`
-instead.
+`--history-once` (and the `history-once` command) works over **VE.Direct serial only**. BLE
+Instant Readout has no history registers, so on a `source: ble` config it exits non-zero straight
+away with `history-once needs source: serial …; BLE Instant Readout carries no daily history`,
+without opening any serial device or sink. On a BLE setup, check the service log for
+`BLE: scanning Instant Readout from …` instead.
 
 ### As a service (systemd)
 
