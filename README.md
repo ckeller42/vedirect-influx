@@ -38,7 +38,8 @@ Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 - Optional **Smart Battery Sense** (BLE) — log battery **temperature** + voltage alongside the charger
   ([see below](#optional-smart-battery-sense-ble))
 - Config via YAML; secrets via env var / file (never in the repo)
-- Ships a portable Grafana dashboard ([`deploy/grafana-victron.json`](deploy/grafana-victron.json))
+- Ships two portable Grafana dashboards — VE.Direct ([`deploy/grafana-victron.json`](deploy/grafana-victron.json))
+  and Bluetooth ([`deploy/grafana-victron-ble.json`](deploy/grafana-victron-ble.json)); see [Grafana](#grafana)
 
 ## Architecture
 
@@ -128,10 +129,15 @@ export INFLUXDB_TOKEN=...        # or use an EnvironmentFile with systemd
 ### Run
 
 ```bash
-vedirect-influx --config config.yaml --history-once   # one-off backfill / smoke test
+vedirect-influx --config config.yaml --history-once   # one-off backfill / smoke test (serial only)
 vedirect-influx --config config.yaml                  # run continuously (live + history)
 vedirect-influx -c config.yaml -v                     # verbose
 ```
+
+`--history-once` (and the `history-once` command) works over **VE.Direct serial only**: it always
+opens `serial.port`, regardless of `source`, and BLE Instant Readout has no history registers. On a
+`source: ble` setup, skip it and check the service log for `BLE: scanning Instant Readout from …`
+instead.
 
 ### As a service (systemd)
 
