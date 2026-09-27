@@ -1,7 +1,7 @@
 # Smart Battery Sense (BLE) → InfluxDB — Design
 
 Date: 2026-07-04
-Status: Approved (pending implementation)
+Status: Implemented (#23, #25)
 
 ## Problem
 
@@ -104,6 +104,11 @@ it:
 - `InfluxDBSink.write_battery` → writes to `battery_measurement` via the existing
   generic `_point(measurement)` (so configured tags apply). New constructor arg
   `battery_measurement`.
+
+  > **Implementation note (#25):** battery points no longer use the global tags as-is.
+  > `sink.battery_tags` (config) is merged over `sink.tags` into `InfluxDBSink._batt_tags`
+  > (battery keys win), and `write_battery` passes those per-measurement tags to `_point`, so a
+  > Battery Sense can carry e.g. `device: battery-sense` instead of the charger's tag.
 - `StdoutSink.write_battery` → prints the frame.
 - `MultiSink.write_battery` → fans out to children.
 - `VrmSink` → inherits the default no-op (temperature is not part of the charger

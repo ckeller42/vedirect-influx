@@ -66,7 +66,9 @@ testpaths = ["vedirect_influx", "tests"]
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["vedirect_influx/_vendor"]  # vendored third-party (velib_python)
+# vendored third-party (velib_python); *.md because ruff >= 0.16 also formats Python fences
+# in Markdown, and the docs/ plans quote code as it was written at the time
+extend-exclude = ["vedirect_influx/_vendor", "*.md"]
 target-version = "py39"
 
 [tool.ruff.lint]
