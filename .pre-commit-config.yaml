@@ -1,7 +1,7 @@
-# Mirrors the CI checks locally. Install:
+# Single source of truth for lint/tool versions; CI runs `pre-commit run --all-files`.
+# Install (both hook types come from default_install_hook_types):
 #   pip install -e ".[dev]"
-#   pre-commit install            # commit-stage checks
-#   pre-commit install --hook-type pre-push   # mypy + pytest before push
+#   pre-commit install
 default_install_hook_types: [pre-commit, pre-push]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -10,38 +10,54 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-merge-conflict
       - id: check-added-large-files
 
-  # Keep rev in step with the exact ruff pin in pyproject.toml's dev extra (what CI runs).
+  # Keep rev in step with the exact ruff pin in pyproject.toml's dev extra.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
       - id: ruff-format
+        types_or: [python, pyi]  # never format Markdown code fences
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
         additional_dependencies: [tomli]
         exclude: ^vedirect_influx/_vendor/  # vendored third-party (velib_python)
 
+  # `gitleaks` scans staged changes only (`gitleaks git --pre-commit --staged`), so
+  # under `--all-files` it checks nothing. `gitleaks-dir` (manual stage, same pinned
+  # binary) scans the working tree; CI runs it with `--hook-stage manual`.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
+      - id: gitleaks
+        alias: gitleaks-dir
+        name: gitleaks (working tree)
+        entry: gitleaks dir --redact --verbose --config .gitleaks.toml .
+        pass_filenames: false
+        stages: [manual]
 
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.48.0
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.3
     hooks:
-      - id: markdownlint
+      - id: markdownlint-cli2  # config + ignores: .markdownlint-cli2.jsonc
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, .yamllint.yaml]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
 
   # Slower checks: only on push
   - repo: https://github.com/pre-commit/mirrors-mypy

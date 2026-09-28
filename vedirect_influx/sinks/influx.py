@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -71,7 +71,7 @@ class InfluxDBSink(Sink):
         p = self._point(self._hist_m)
         self._add_fields(p, fields)
         # timestamp at the day's midnight UTC -> idempotent re-writes per day
-        p.time(datetime.combine(day, time.min, tzinfo=timezone.utc))
+        p.time(datetime.combine(day, time.min, tzinfo=UTC))
         self._write.write(bucket=self._bucket, org=self._org, record=p)
 
     def write_battery(self, fields: dict, ts: datetime | None = None) -> None:
