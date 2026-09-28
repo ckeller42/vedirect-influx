@@ -30,8 +30,10 @@ repos:
         exclude: ^vedirect_influx/_vendor/  # vendored third-party (velib_python)
 
   # `gitleaks` scans staged changes only (`gitleaks git --pre-commit --staged`), so
-  # under `--all-files` it checks nothing. `gitleaks-dir` (manual stage, same pinned
-  # binary) scans the working tree; CI runs it with `--hook-stage manual`.
+  # under `--all-files` it checks nothing. The manual-stage twins (same pinned
+  # binary) cover the rest; CI runs both with `--hook-stage manual`:
+  # `gitleaks-dir` scans the working tree, `gitleaks-history` every commit
+  # (needs a full clone — CI checks out with fetch-depth: 0).
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
@@ -40,6 +42,12 @@ repos:
         alias: gitleaks-dir
         name: gitleaks (working tree)
         entry: gitleaks dir --redact --verbose --config .gitleaks.toml .
+        pass_filenames: false
+        stages: [manual]
+      - id: gitleaks
+        alias: gitleaks-history
+        name: gitleaks (git history)
+        entry: gitleaks git --redact --verbose --config .gitleaks.toml .
         pass_filenames: false
         stages: [manual]
 

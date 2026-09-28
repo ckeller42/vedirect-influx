@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          fetch-depth: 0  # gitleaks-history scans every commit
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
@@ -30,8 +31,10 @@ jobs:
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
       - run: pip install pre-commit
       - run: pre-commit run --all-files --show-diff-on-failure
-      # the commit-stage gitleaks hook only sees staged changes; scan the whole tree
+      # the commit-stage gitleaks hook only sees staged changes; scan the whole
+      # tree and every commit (a secret committed then deleted stays in history)
       - run: pre-commit run --hook-stage manual gitleaks-dir --all-files
+      - run: pre-commit run --hook-stage manual gitleaks-history --all-files
 
   types:
     runs-on: ubuntu-latest

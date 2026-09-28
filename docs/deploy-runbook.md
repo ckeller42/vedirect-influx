@@ -122,11 +122,15 @@ owned by that user with mode `0600`:
 
 ```bash
 sudo sed -i 's/^source: serial.*/source: ble/' /etc/vedirect-influx/config.yaml
-sudo tee -a /etc/vedirect-influx/config.yaml >/dev/null <<EOF
+# append the ble: block only once (a second top-level ble: would shadow the first);
+# on a re-run with a different MAC, edit the existing block instead
+if ! sudo grep -q '^ble:' /etc/vedirect-influx/config.yaml; then
+  sudo tee -a /etc/vedirect-influx/config.yaml >/dev/null <<EOF
 ble:
   mac: $BLE_MAC
   key_file: /etc/vedirect-influx/ble_key.txt
 EOF
+fi
 printf '%s\n' "$BLE_KEY" | sudo install -m600 -o "$(whoami)" /dev/stdin /etc/vedirect-influx/ble_key.txt
 
 # Optional Smart Battery Sense: add its MAC + key under ble:, and the battery measurement
@@ -160,8 +164,10 @@ device. Step 6's log line is the BLE smoke test.
 Stop any process holding the port first; only one process may own `/dev/victron`.
 
 ```bash
-sudo INFLUXDB_TOKEN="$INFLUX_TOKEN" "$VENV/bin/vedirect-influx" \
-  --config /etc/vedirect-influx/config.yaml --history-once
+# load the token from the root-only secrets file inside the root shell, so it never
+# appears on a command line (`/proc/<pid>/cmdline` is world-readable)
+sudo sh -c 'set -a; . /etc/vedirect-influx/secrets.env; exec "$0" "$@"' \
+  "$VENV/bin/vedirect-influx" --config /etc/vedirect-influx/config.yaml --history-once
 ```
 
 **Check:** output ends with `wrote N day records` where `N >= 1`. If `N == 0`, the device may
@@ -203,6 +209,8 @@ sudo systemctl enable --now vedirect-influx
 ## 7. End-to-end verification (data in InfluxDB)
 
 ```bash
+# the check reads the step-0 values from the environment, so export them first
+export INFLUX_URL INFLUX_ORG INFLUX_BUCKET INFLUX_TOKEN
 "$VENV/bin/python" - <<'PY'
 import os
 from influxdb_client import InfluxDBClient
@@ -230,10 +238,12 @@ want Grafana.
 # register this device with VRM (derives Portal ID from eth0 MAC, stores an auth token)
 sudo "$VENV/bin/vedirect-influx" --config /etc/vedirect-influx/config.yaml vrm-register --test  # ping
 sudo "$VENV/bin/vedirect-influx" --config /etc/vedirect-influx/config.yaml vrm-register         # ANNOUNCE
+# vrm-register ran as root and wrote the token 0600 root-owned; hand it to the service user
+sudo chown "$(whoami)" /etc/vedirect-influx/vrm_auth_token.txt
 ```
 
 **Check:** `--test` prints `vrm: OK`; the full register prints the **VRM Portal ID** and claim
-steps. Then, in VRM: *Add installation → by VRM Portal ID →* paste that ID.
+steps; `ls -l /etc/vedirect-influx/vrm_auth_token.txt` shows `-rw-------` owned by the service user. Then, in VRM: *Add installation → by VRM Portal ID →* paste that ID.
 
 Enable the sink (it runs alongside InfluxDB) and restart:
 

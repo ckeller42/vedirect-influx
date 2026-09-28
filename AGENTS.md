@@ -70,7 +70,7 @@ pre-commit run --all-files  # every commit-stage check CI runs
 
 Secrets (InfluxDB tokens, BLE Instant Readout keys, VRM auth tokens), real `config.yaml` /
 `secrets.env` files, or MAC addresses of your own devices. gitleaks runs on
-every commit and over the working tree in CI.
+every commit and over the working tree and full git history in CI.
 
 ## PR workflow
 
