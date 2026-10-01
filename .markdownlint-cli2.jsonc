@@ -1,7 +1,12 @@
+// The ONE markdownlint config for this repo (markdownlint-cli2, run via pre-commit).
 {
-  // Rules live in .markdownlint.json (auto-loaded). This file only tells
-  // markdownlint-cli2 to skip internal Superpowers process artifacts
-  // (design specs / implementation plans), which are development records,
-  // not shipped project documentation.
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD033": false,
+    "MD041": false
+  },
+  // Superpowers process artifacts (design specs / implementation plans) are
+  // development records, not shipped project documentation.
   "ignores": ["docs/superpowers/**"]
 }

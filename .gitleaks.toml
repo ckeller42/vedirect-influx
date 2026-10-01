@@ -8,6 +8,9 @@ useDefault = true
 description = "Test fixtures contain a Victron device serial (not a secret)"
 paths = [
   '''tests/fixtures/.*''',
+  # `gitleaks dir` ignores .gitignore: skip local-only trees (site-packages test keys)
+  '''^\.venv/''',
+  '''^\.(pytest|ruff|mypy)_cache/''',
 ]
 regexes = [
   '''HQ2521DJPUY''',

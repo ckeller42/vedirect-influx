@@ -8,8 +8,16 @@ version = "0.1.0"
 description = "Read Victron VE.Direct text + HEX daily-history and ingest into InfluxDB"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.11"  # deploy target (buspi) runs 3.13; 3.9/3.10 are EOL
 authors = [{ name = "ckeller42" }]
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 keywords = ["victron", "ve.direct", "vedirect", "mppt", "solar", "influxdb", "grafana"]
 dependencies = [
     "pyserial>=3.5",
@@ -72,7 +80,7 @@ line-length = 100
 # vendored third-party (velib_python); *.md because ruff >= 0.16 also formats Python fences
 # in Markdown, and the docs/ plans quote code as it was written at the time
 extend-exclude = ["vedirect_influx/_vendor", "*.md"]
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 # E/F=pyflakes+pycodestyle, I=isort, UP=pyupgrade, B=bugbear, D=pydocstyle
@@ -89,7 +97,7 @@ convention = "pep257"
 "tests/*" = ["D"]  # tests don't need docstrings
 
 [tool.mypy]
-python_version = "3.10"  # type-check semantics; runtime still supports 3.9
+python_version = "3.11"  # the requires-python floor
 ignore_missing_imports = true  # pyserial / influxdb_client ship no stubs
 warn_unused_ignores = true
 exclude = ["vedirect_influx/_vendor/"]

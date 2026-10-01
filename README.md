@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ckeller42/vedirect-influx/actions/workflows/ci.yml/badge.svg)](https://github.com/ckeller42/vedirect-influx/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9–3.12](https://img.shields.io/badge/python-3.9%E2%80%933.12-blue.svg)](pyproject.toml)
+[![Python 3.11–3.13](https://img.shields.io/badge/python-3.11%E2%80%933.13-blue.svg)](pyproject.toml)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-2a6db2.svg)](https://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen.svg)](https://pre-commit.com/)
@@ -102,7 +102,7 @@ git clone https://github.com/ckeller42/vedirect-influx
 cd vedirect-influx
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pre-commit install && pre-commit install --hook-type pre-push   # local CI checks
+pre-commit install                                              # commit + pre-push hooks
 pytest -q                                                       # run tests + doctests
 ```
 
@@ -150,7 +150,7 @@ echo "INFLUXDB_TOKEN=..." | sudo tee /etc/vedirect-influx/secrets.env && sudo ch
 sudo systemctl enable --now vedirect-influx
 ```
 
-> Deploying on a Raspberry Pi with an automated/AI agent? See [AGENTS.md](AGENTS.md) for a
+> Deploying on a Raspberry Pi with an automated/AI agent? See [docs/deploy-runbook.md](docs/deploy-runbook.md) for a
 > step-by-step runbook with per-step success checks.
 
 ## InfluxDB schema
@@ -304,6 +304,9 @@ ruff check . && ruff format --check .
 mypy vedirect_influx
 pre-commit run --all-files
 ```
+
+Tool versions (ruff, codespell, gitleaks, markdownlint-cli2, yamllint, actionlint) are pinned in
+`.pre-commit-config.yaml`, and CI runs the same hooks. Contributor rules: [AGENTS.md](AGENTS.md).
 
 ## License
 
