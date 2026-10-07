@@ -13,3 +13,6 @@ uv.lock
 
 # Local-only design specs and plans
 docs/superpowers/
+
+# Sphinx build output
+docs/_build/

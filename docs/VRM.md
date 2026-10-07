@@ -4,7 +4,7 @@
 the Victron mobile app **without Venus OS / a GX device**, by speaking the same HTTP upload a
 Venus device's `vrmlogger` uses. This document describes the protocol it implements, the field
 mapping, and how to operate it. For the quick start see the
-[README section](../README.md#victron-vrm-portal-direct-no-venus-os).
+[README section](https://github.com/ckeller42/vedirect-influx#victron-vrm-portal-direct-no-venus-os).
 
 > ⚠️ **Unofficial.** This targets an undocumented Victron endpoint and identifies as a GX device.
 > It is intended for personal use with your own hardware. Victron may change or block it at any
@@ -44,7 +44,7 @@ Because the CA cert predates strict `basicConstraints`, the client clears OpenSS
 `VERIFY_X509_STRICT` flag — verification stays **on**, just not pedantic. Override with
 `vrm.ca_file` if needed.
 
-## Field → VRM code map
+## Field to VRM code map
 
 Decoded fields are translated to Victron `solarcharger` codes (from Venus' `datalist.py`), with a
 `[<instance>]` suffix (default `0`):
@@ -77,21 +77,12 @@ model only has *today* and *yesterday* daily slots, so deeper history (≥ 2 day
 **only if `history_backfill: true`**, back-dated via `TO` — **experimental**; verify it actually
 lands before relying on it.
 
-## Configuration reference (`vrm:` section)
+## Configuration
 
-| key | default | meaning |
-| --- | --- | --- |
-| `enabled` | `false` | turn the VRM sink on (fans out alongside the primary sink) |
-| `iface` | `eth0` | interface whose MAC becomes the Portal ID |
-| `portal_id` | *(derived)* | set explicitly to override the MAC-derived ID |
-| `device_instance` | `0` | solarcharger instance suffix |
-| `product_id` | `0xA075` | `/ProductId` reported to VRM |
-| `custom_name` | *(none)* | device name shown in VRM |
-| `firmware` | *(none)* | `/FirmwareVersion` shown in VRM |
-| `interval_s` | `60` | logging interval reported to VRM |
-| `auth_token_file` | `/etc/vedirect-influx/vrm_auth_token.txt` | generated ownership token |
-| `ca_file` | *(bundled)* | override the CCGX CA bundle path |
-| `history_backfill` | `false` | upload >1-day-old history via `TO` (experimental) |
+All keys of the `vrm:` section, with defaults, are in the
+[configuration reference](reference/configuration.md#vrm-optional-upload). Upload cadence is the
+live sample cadence (`live_interval_s`); `vrm.interval_s` is only the logging interval reported to
+VRM as `t`.
 
 ## Troubleshooting
 

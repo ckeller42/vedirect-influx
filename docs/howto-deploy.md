@@ -1,6 +1,6 @@
-# Deploy runbook — vedirect-influx on a Raspberry Pi
+# Deploy on a Raspberry Pi
 
-Runbook for an autonomous agent to install and verify `vedirect-influx` on a Raspberry Pi.
+This is the runbook for an autonomous agent to install and verify `vedirect-influx` on a Raspberry Pi.
 Execute steps in order. Each step has a **check** with a concrete success criterion — do not
 proceed until it passes. Commands are idempotent (safe to re-run). Use `sudo` as shown.
 
@@ -13,7 +13,7 @@ First decide the **data source** (ask the user if unclear) and set `SOURCE` acco
 - `SOURCE=ble` — a SmartSolar read over Bluetooth **Instant Readout** (no cable). Needs a
   working Bluetooth adapter on the Pi and the charger's **Instant Readout encryption key**.
   Live subset only: no `pv_voltage`, lifetime `yield_total`, `max_power`, `tracker_mode`, or
-  daily history (see the README's *Bluetooth source* section).
+  daily history (see [what each source provides](reference/data-contract.md#what-each-source-provides)).
 
 Common to both:
 
@@ -86,6 +86,8 @@ sudo "$VENV/bin/pip" install "git+https://github.com/ckeller42/vedirect-influx"
 **Check:** `"$VENV/bin/vedirect-influx" --help` prints usage.
 
 ## 4. Configuration + secret
+
+All keys are listed in the [configuration reference](reference/configuration.md).
 
 ```bash
 sudo install -d /etc/vedirect-influx
@@ -231,7 +233,7 @@ live stream). With a Smart Battery Sense, `victron_battery` also receives points
 ## 8. (Optional) Victron VRM Portal — direct upload, no Venus OS
 
 Uploads the same data to [VRM](https://vrm.victronenergy.com) (and the Victron app) *in addition*
-to InfluxDB. See [docs/VRM.md](VRM.md) for how it works and the caveats. Skip if you only
+to InfluxDB. See [VRM upload protocol](VRM.md) for how it works and the caveats. Skip if you only
 want Grafana.
 
 ```bash

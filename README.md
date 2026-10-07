@@ -1,6 +1,7 @@
 # vedirect-influx
 
 [![CI](https://github.com/ckeller42/vedirect-influx/actions/workflows/ci.yml/badge.svg)](https://github.com/ckeller42/vedirect-influx/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-ckeller42.github.io-blue.svg)](https://ckeller42.github.io/vedirect-influx/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11–3.13](https://img.shields.io/badge/python-3.11%E2%80%933.13-blue.svg)](pyproject.toml)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -18,6 +19,9 @@ aggregates (`H19`–`H23`). The charger actually stores ~30 days of **daily hist
 reachable only over the HEX protocol. `vedirect-influx` reads those history registers and
 backfills them into InfluxDB — so Grafana shows real historic daily yield, **including days
 before you started logging**.
+
+Documentation: **<https://ckeller42.github.io/vedirect-influx/>** (getting started, deploy guide, configuration and
+data reference, architecture).
 
 Validated against a **SmartSolar MPPT 75/15** (PID `0xA075`, FW 1.74).
 
@@ -150,7 +154,7 @@ echo "INFLUXDB_TOKEN=..." | sudo tee /etc/vedirect-influx/secrets.env && sudo ch
 sudo systemctl enable --now vedirect-influx
 ```
 
-> Deploying on a Raspberry Pi with an automated/AI agent? See [docs/deploy-runbook.md](docs/deploy-runbook.md) for a
+> Deploying on a Raspberry Pi with an automated/AI agent? See [docs/howto-deploy.md](docs/howto-deploy.md) for a
 > step-by-step runbook with per-step success checks.
 
 ## InfluxDB schema

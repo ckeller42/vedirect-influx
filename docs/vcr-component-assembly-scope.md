@@ -1,5 +1,10 @@
 # Scope: VictronConnect-Remote via assembled Venus components (no full Venus OS)
 
+> **Note.** This is a design and findings record, dated 2026-06-03, and the work is shelved (see
+> the status below). What exists on `main` is the dormant VregLink code: `reader.vreg_get`, the
+> IPC socket (`ipc.py`), the pure request logic (`vreglink.py`) and the D-Bus service shell
+> (`vreglink_service.py`). The [architecture page](architecture.md) shows where they sit.
+
 **Goal.** Make the SmartSolar 75/15 appear and be usable in **VictronConnect's VRM tab**
 (two-way / VC-R) on the existing Raspberry Pi (buspi, aarch64 / Debian 13), **without** replacing
 Raspberry Pi OS, and **without** losing the current `vedirect-influx` → InfluxDB → Grafana stack.
@@ -30,7 +35,7 @@ because we already speak VE.Direct text + HEX in `vedirect-influx`.
 | Capability | Status | How it was verified |
 | --- | --- | --- |
 | Remote monitoring via VRM (`log.php`, PR #10) | **Works (live-tested)** | MPPT showed in VRM web + app: battery ~13.4 V, Float, daily/total yields, PV, state |
-| Real-time VRM MQTT (`VrmMqttSink`, PR #11) | Connects + publishes | connects `mqtt92:8883` as `ccgxapikey_<id>`; publishes `N/` topics; answers `R/` keepalives |
+| Real-time VRM MQTT (`VrmMqttSink`, PR #11) | Connects + publishes (**not on `main`**: the code lives on the unmerged branch `feat/vrm-realtime-mqtt`) | connects `mqtt92:8883` as `ccgxapikey_<id>`; publishes `N/` topics; answers `R/` keepalives |
 | `mqtt-rpc` broker authentication | **Broker accepts our creds** | with *fresh* creds: CONNACK Success **and** SUBSCRIBE granted on `P/<id>/in/#` |
 | VregLink core (PR #13) + service shell (#14) | **Unit-tested only** | `reader.vreg_get`, `ipc.py`, `vreglink.py` covered; the D-Bus service was **not** run on a device |
 | Firmware `v` field (PR #12) | Fixed | had sent the package *name* as the gateway firmware; now the package version |
@@ -65,8 +70,9 @@ Net: VictronConnect's VRM tab shows **"No devices found"**, and **zero** RPC pro
 
 ### Where the code lives
 
-PRs **#10** (VRM upload), **#11** (realtime MQTT), **#12** (firmware fix), **#13** (VregLink core),
-**#14** (VregLink D-Bus service) — merged to `main`. The VregLink/VC-R path is **off by default**
+PRs **#10** (VRM upload), **#12** (firmware fix), **#13** (VregLink core),
+**#14** (VregLink D-Bus service) are merged to `main`. PR **#11** (realtime MQTT) is not: it lives on
+the branch `feat/vrm-realtime-mqtt`. The VregLink/VC-R path is **off by default**
 (`vreg.ipc_enabled: false`) and inert unless the Venus stack runs and Milestone 0 passes.
 
 ## ⚠️ Milestone 0 — validate the premise before building (do this first)
@@ -119,7 +125,7 @@ against). If **no** (even genuine Venus-on-Pi can't) → stop; nothing assembled
 | **dbus-flashmq** | open source (victronenergy/dbus-flashmq), builds against Venus SDK | extract prebuilt `.so` from Venus image, or build (SDK) |
 | **localsettings** | open source (victronenergy, Python/velib) | run as-is; set `/Settings/Network/VrmPortal=2` |
 | **mqtt-rpc** | extracted from Venus v3.55 (Python + velib + vregops) | run against `localhost:1883`; prune unneeded handlers |
-| **VRM registration** | `vedirect_influx.vrm.store_mqtt_password` (we have it) | reuse |
+| **VRM registration** | `store_mqtt_password`, on the unmerged `feat/vrm-realtime-mqtt` branch (not in `vedirect_influx.vrm` on `main`) | merge or reuse |
 | **`solarcharger` D-Bus service w/ VregLink** | **NEW — core deliverable** | write (reuses our HEX code) |
 
 ### The core new code — `VregLink` D-Bus solarcharger service

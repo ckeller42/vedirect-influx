@@ -1,0 +1,7 @@
+# Doc toolchain for the Sphinx + Furo site (same pins as open-california).
+# Build:  python -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
+#         .venv/bin/python -m sphinx -b html -W docs docs/_build/html
+sphinx>=8,<9
+sphinxcontrib-mermaid>=1,<2   # mermaid diagrams (client-side, .. mermaid:: + ```mermaid fences)
+myst-parser>=5.1.0,<6         # the markdown pages (myst 5 requires Sphinx 8)
+furo>=2025.12.19              # the theme

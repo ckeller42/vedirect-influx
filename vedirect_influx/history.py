@@ -5,9 +5,10 @@ record is a 34-byte little-endian payload; empty day slots return flags 0x04.
 
 Field offsets were calibrated against a SmartSolar MPPT 75/15 by cross-checking
 the decoded values against the text-protocol aggregates (H20/H21/H22/H23):
-  - day 0 yield == H20 (today),  day 1 yield == H22 (yesterday)
-  - day 0 max power == H21,      day 1 max power == H23
-  - day_seq decrements by 1 each day back (matches HSDS)
+
+- day 0 yield == H20 (today),  day 1 yield == H22 (yesterday)
+- day 0 max power == H21,      day 1 max power == H23
+- day_seq decrements by 1 each day back (matches HSDS)
 """
 
 from __future__ import annotations
