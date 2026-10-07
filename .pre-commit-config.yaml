@@ -67,6 +67,15 @@ repos:
     hooks:
       - id: actionlint
 
+  # Workflow security audit. --offline: the online audits need a GitHub token and fail
+  # without one (pre-commit job, fresh clones); the offline set covers permissions,
+  # template-injection, credential persistence, unpinned uses and dependabot cooldown.
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+        args: [--offline]
+
   # Slower checks: only on push
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.1.0
