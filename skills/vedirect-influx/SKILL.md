@@ -7,7 +7,7 @@ description: Guided setup of vedirect-influx on a Raspberry Pi — wires a Victr
 
 Guide a user through installing and verifying `vedirect-influx` on a Raspberry Pi, then optionally
 enabling the Victron **VRM Portal** upload. The authoritative, check-by-check runbook lives in the
-repo's [`docs/deploy-runbook.md`](../../docs/deploy-runbook.md) — follow it in order; this skill orchestrates it and knows
+repo's [`docs/howto-deploy.md`](../../docs/howto-deploy.md) — follow it in order; this skill orchestrates it and knows
 where to make decisions.
 
 ## Before you start, gather
@@ -48,7 +48,7 @@ Run the runbook's steps **1–7** in order, honouring each **Check** before proc
 7. Verify live points land in InfluxDB (`LIVE_FIELDS > 0`); with a Battery Sense, also in
    `victron_battery`.
 
-If a check fails, consult the **Troubleshooting** section of `docs/deploy-runbook.md` (port busy, permission,
+If a check fails, consult the **Troubleshooting** section of `docs/howto-deploy.md` (port busy, permission,
 field-type conflict, no history, BLE no points) before moving on. For Grafana, import
 `deploy/grafana-victron.json` (serial) or `deploy/grafana-victron-ble.json` (BLE).
 

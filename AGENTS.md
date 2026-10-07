@@ -1,7 +1,7 @@
 # AGENTS.md — working rules for vedirect-influx
 
 Rules for agents and contributors changing this repo. To **deploy** it on a Raspberry Pi, follow
-[docs/deploy-runbook.md](docs/deploy-runbook.md) instead (step-by-step, with per-step checks).
+[docs/howto-deploy.md](docs/howto-deploy.md) instead (step-by-step, with per-step checks).
 
 ## What it is
 
@@ -24,7 +24,7 @@ target (buspi) runs Python 3.13; the floor is `requires-python >= 3.11`.
 | `vedirect_influx/_vendor/` | vendored `velib_python` (`vedbus.py`) — do not edit |
 | `tests/` | pytest suite (+ doctests from the package); `tests/fixtures/` holds captured device data |
 | `deploy/` | example config, systemd unit, Grafana dashboards |
-| `docs/` | deploy runbook, VRM notes; `docs/superpowers/` = design records (local-only, gitignored) |
+| `docs/` | the Sphinx site (see Docs contract below): `architecture.md`, `howto-deploy.md` (the deploy runbook), `getting-started.md`, `reference/`, `VRM.md`, `vcr-component-assembly-scope.md`; `docs/superpowers/` = design records (local-only, gitignored) |
 | `skills/vedirect-influx/` | agent skill that orchestrates the deploy runbook |
 
 ## Dev setup and commands
@@ -77,3 +77,24 @@ every commit and over the working tree and full git history in CI.
 Branch from `main`, open a PR; CI (`pre-commit`, `types`, `test` on 3.11–3.13, `build`, `links`,
 `security`) must be green. CodeRabbit reviews PRs (`.coderabbit.yaml`). Commit prefixes follow the
 history: `feat:`, `fix:`, `docs:`, `chore:`, `test:` (optional scope, e.g. `fix(ble):`).
+
+## Docs contract
+
+The docs are a Sphinx + Furo site under `docs/` (Markdown via MyST, Mermaid diagrams).
+
+- **Four groups, one home per fact.** Every page is in exactly one nav group in `docs/index.rst`:
+  Getting started, How-to guides, Reference, Explanation. Link to the owning page instead of
+  copying its content.
+- **One architecture page.** `docs/architecture.md` (arc42 sections 1 to 12, C4 drawn as Mermaid).
+  Update it with the code; its module table and diagrams must match the modules and measurement
+  names.
+- **One diagram style.** Mermaid only: C4 colours person `#08427b`, system `#1168bd`, container
+  `#438dd5`, external `#999`. No `;`, no bare `&`, `<` or `>` in free text (`<br/>` is fine),
+  no `<-->`, no `:` in a `loop` or `opt` label.
+- **Config reference follows `config.py`.** A new `Config` field needs a row in
+  `docs/reference/configuration.md` (`tests/test_docs_config_reference.py` fails otherwise); a
+  changed measurement or field updates `docs/reference/data-contract.md` and the dashboards.
+- **The build is a gate.** `sphinx-build -b html -W docs docs/_build/html` (CI job `docs`, not a
+  required check). Install with `pip install -r docs/requirements.txt`. Link repo files outside
+  `docs/` with absolute GitHub URLs, not relative paths, or the `-W` build warns.
+- The concept behind this layout is `DOCUMENTATION.md` in the buspi-config repo.
