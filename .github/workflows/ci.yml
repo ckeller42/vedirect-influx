@@ -8,7 +8,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # PRs share a group per ref (superseded runs are cancelled); every push gets its own group,
+  # because a shared group would still cancel an older *pending* run on main.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   # PR runs supersede each other; a push to main is never cancelled
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
