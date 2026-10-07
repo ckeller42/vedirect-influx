@@ -24,7 +24,7 @@ target (buspi) runs Python 3.13; the floor is `requires-python >= 3.11`.
 | `vedirect_influx/_vendor/` | vendored `velib_python` (`vedbus.py`) — do not edit |
 | `tests/` | pytest suite (+ doctests from the package); `tests/fixtures/` holds captured device data |
 | `deploy/` | example config, systemd unit, Grafana dashboards |
-| `docs/` | deploy runbook, VRM notes; `docs/superpowers/` = design records (not linted) |
+| `docs/` | deploy runbook, VRM notes; `docs/superpowers/` = design records (local-only, gitignored) |
 | `skills/vedirect-influx/` | agent skill that orchestrates the deploy runbook |
 
 ## Dev setup and commands
