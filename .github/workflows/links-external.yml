@@ -1,0 +1,51 @@
+name: links-external
+# Weekly check of external links (the per-PR `links` job in ci.yml is offline).
+# On failure, opens or updates one issue with the report.
+on:
+  schedule:
+    - cron: "43 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write  # open/update the report issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Link check
+        id: lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
+        with:
+          args: >-
+            --no-progress --accept 200,206,429,500,502,503,504
+            --max-retries 3 --retry-wait-time 5
+            --exclude 'victronenergy\.com'
+            --exclude 'pypi\.org/project/vedirect-influx'
+            './**/*.md'
+          output: lychee/out.md
+          fail: false
+      - name: Open or update the report issue
+        if: steps.lychee.outputs.exit_code != 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="Broken external links"
+          n=$(gh issue list --state open --search "$title in:title" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body-file lychee/out.md
+          else
+            gh issue create --title "$title" --body-file lychee/out.md
+          fi
+      - name: Fail the run when links are broken
+        if: steps.lychee.outputs.exit_code != 0
+        run: exit 1

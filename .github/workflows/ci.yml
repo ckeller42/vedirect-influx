@@ -8,8 +8,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # PRs share a group per ref (superseded runs are cancelled); every push gets its own group,
+  # because a shared group would still cancel an older *pending* run on main.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  # PR runs supersede each other; a push to main is never cancelled
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # ruff, ruff-format, codespell, gitleaks, markdownlint-cli2, yamllint, actionlint,
@@ -17,6 +20,7 @@ jobs:
   # Tool versions live in .pre-commit-config.yaml only.
   pre-commit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -38,6 +42,7 @@ jobs:
 
   types:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -51,6 +56,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +74,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -79,26 +86,33 @@ jobs:
       - run: pip install build twine
       - run: python -m build
       - run: twine check dist/*
+      # smoke test: the built wheel installs into a clean venv and the entry point runs
+      - name: Smoke-test the wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/pip" install dist/*.whl
+          "$RUNNER_TEMP/smoke/bin/vedirect-influx" --help
 
   links:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+      # Per-PR: internal links only (offline) so a flaky external host never blocks a PR.
+      # External links are checked weekly by links-external.yml.
       - name: Link check
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
         with:
           args: >-
-            --no-progress --accept 200,206,429,500,502,503,504
-            --max-retries 3 --retry-wait-time 5
-            --exclude 'victronenergy\.com'
-            --exclude 'pypi\.org/project/vedirect-influx'
+            --offline --no-progress
             './**/*.md'
           fail: true
 
   security:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -107,5 +121,13 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+      # Audit the project's own dependency tree (runtime + the `ble` extra; not `vcr`, which
+      # needs system libs). Same audit as security-weekly.yml.
+      - name: Resolve project dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/proj"
+          "$RUNNER_TEMP/proj/bin/pip" install ".[ble]"
+          "$RUNNER_TEMP/proj/bin/pip" freeze --exclude-editable | grep -v '^vedirect-influx' > "$RUNNER_TEMP/audit-reqs.txt"
+          cat "$RUNNER_TEMP/audit-reqs.txt"
       - run: pip install pip-audit
-      - run: pip-audit
+      - run: pip-audit -r "$RUNNER_TEMP/audit-reqs.txt" --no-deps --disable-pip

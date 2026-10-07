@@ -5,7 +5,24 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+    groups:
+      # Not ruff: its pin in pyproject.toml must move in lockstep with the
+      # ruff-pre-commit rev in .pre-commit-config.yaml, so it gets its own PR.
+      python-minor-patch:
+        update-types: [minor, patch]
+        exclude-patterns: [ruff]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns: ["*"]
