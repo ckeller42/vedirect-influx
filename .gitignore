@@ -10,3 +10,6 @@ dist/
 # local dev tools
 /actionlint
 uv.lock
+
+# Local-only design specs and plans
+docs/superpowers/
