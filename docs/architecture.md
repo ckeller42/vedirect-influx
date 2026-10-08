@@ -1,7 +1,6 @@
 # Architecture
 
-How `vedirect-influx` is built, structured by [arc42](https://arc42.org) and drawn with the
-[C4 model](https://c4model.com) as Mermaid diagrams. Claims link to the code or a test.
+How `vedirect-influx` is built. Claims link to the code or a test.
 
 ## 1. Introduction and goals
 
@@ -393,4 +392,3 @@ InfluxDB may also be remote: `sink.url` decides. The serial and Bluetooth paths 
 | VictronConnect-Remote | Configuring a charger through VRM, needs genuine Venus OS |
 | VReg, VregLink | Victron register access, and its D-Bus interface used by VictronConnect-Remote |
 | Sink | A destination for decoded data, see `Sink` |
-| C4, arc42 | The diagram model and the section template used on this page |
