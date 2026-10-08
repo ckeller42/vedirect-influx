@@ -1,0 +1,104 @@
+name: Dependabot auto-merge
+on:
+  # zizmor: ignore[dangerous-triggers] -- deliberate. The job never checks out or
+  # runs PR code: it only reads PR metadata through the API and merges Dependabot's
+  # own PR, pinned to the commit CI validated (--match-head-commit), and only
+  # after CI succeeded. No untrusted input reaches a shell (all values go via env).
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+permissions: {}
+
+# One queue per PR branch: runs for different Dependabot PRs never cancel each other,
+# and a re-run for the same branch waits for the previous one. A PR that turns
+# conflicting after another merge is rebased by Dependabot and re-validated by CI.
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    # Fires only after CI already succeeded for this exact commit — intentionally
+    # independent of the repo's "Allow auto-merge" toggle and of branch-protection
+    # required-checks, so it needs no repo settings to be correct.
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Write access is scoped to this job only (merge needs both).
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Resolve PR and check eligibility
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          EXCLUDE_REF_PREFIXES: ""
+        run: |
+          number=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.pull_requests[0].number // empty')
+          if [ -z "$number" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+          # `gh pr view --json author` reports bots as "app/dependabot"; the REST
+          # user login is the canonical "dependabot[bot]".
+          author=$(gh api "repos/$REPO/pulls/$number" --jq '.user.login')
+          if [ "$author" != "dependabot[bot]" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Ecosystems that must never merge unattended (space-separated branch
+          # prefixes such as "dependabot/pip/"). Empty means every ecosystem.
+          ref=$(gh api "repos/$REPO/pulls/$number" --jq '.head.ref')
+          for prefix in $EXCLUDE_REF_PREFIXES; do
+            case "$ref" in
+              "$prefix"*)
+                echo "eligible=false" >> "$GITHUB_OUTPUT"
+                echo "::notice::Skipping auto-merge for #$number — $prefix is merged by hand"
+                exit 0
+                ;;
+            esac
+          done
+
+          # Refuse when anyone but Dependabot pushed commits to the branch: the PR
+          # author stays dependabot[bot], so an added commit would merge unreviewed.
+          others=$(gh api "repos/$REPO/pulls/$number/commits" --paginate \
+                   --jq '.[] | select(.author.login != "dependabot[bot]") | .sha')
+          if [ -n "$others" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping auto-merge for #$number — contains non-Dependabot commits"
+            exit 0
+          fi
+
+          # Dependabot stamps each commit with a structured trailer per bumped
+          # dependency: "update-type: version-update:semver-{major,minor,patch}".
+          # Eligible iff at least one trailer exists and none is a major bump —
+          # covers grouped updates and SHA-pinned actions, which a title parse
+          # can't classify. `|| true` keeps a no-match grep from tripping bash -e.
+          types=$(gh pr view "$number" --repo "$REPO" --json commits --jq '.commits[].messageBody' \
+                  | grep -oE 'update-type: version-update:semver-[a-z]+' | sort -u || true)
+          if [ -z "$types" ] || echo "$types" | grep -q 'semver-major'; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping auto-merge for #$number — major bump or no update-type trailer: ${types:-<none>}"
+            exit 0
+          fi
+
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+
+      - name: Merge
+        if: steps.check.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ steps.check.outputs.number }}
+          # Pin the merge to the commit CI actually validated. If Dependabot rebased
+          # the PR meanwhile, GitHub refuses (409) and the new head's own CI run
+          # re-triggers this workflow.
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: gh pr merge "$NUMBER" --repo "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"
