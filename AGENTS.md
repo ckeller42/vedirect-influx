@@ -105,3 +105,7 @@ The docs are a Sphinx + Furo site under `docs/` (Markdown via MyST, Mermaid diag
 on its exact head commit, but only when no bumped dependency is a semver major (it reads the
 `update-type` trailers; a grouped PR waits if any member is major). It does not rely on the
 repo's "Allow auto-merge" setting. Major bumps and anything CI rejects stay open for review.
+It also skips PRs without an `update-type` trailer, PRs with a commit not authored by Dependabot,
+and branches matching `EXCLUDE_REF_PREFIXES` (empty here). A merge made with the workflow's token
+does not start `push` workflows, so CI and the docs deploy do not re-run on `main` afterwards;
+run them by hand if a bump needs it.
