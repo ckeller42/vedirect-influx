@@ -66,6 +66,16 @@ jobs:
             esac
           done
 
+          # Refuse when anyone but Dependabot pushed commits to the branch: the PR
+          # author stays dependabot[bot], so an added commit would merge unreviewed.
+          others=$(gh api "repos/$REPO/pulls/$number/commits" --paginate \
+                   --jq '.[] | select(.author.login != "dependabot[bot]") | .sha')
+          if [ -n "$others" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping auto-merge for #$number — contains non-Dependabot commits"
+            exit 0
+          fi
+
           # Dependabot stamps each commit with a structured trailer per bumped
           # dependency: "update-type: version-update:semver-{major,minor,patch}".
           # Eligible iff at least one trailer exists and none is a major bump —
