@@ -9,13 +9,11 @@ parse only the live text stream, which exposes today and yesterday aggregates. T
 keeps about 30 days of history on the device, reachable only through the HEX protocol. This
 project reads both, so Grafana shows real daily yield including days before logging began.
 
-| Goal | What it means |
-| --- | --- |
-| Complete data | Live telemetry plus the on-device daily history in InfluxDB |
-| Harmless to the device | Read-only toward the charger, it cannot change a setting |
-| Two ways in | VE.Direct serial cable or Bluetooth Instant Readout, chosen by one config field |
-| Optional extra outputs | VRM Portal upload alongside InfluxDB, no Venus OS |
-| Unattended operation | Runs as a systemd service on a Raspberry Pi and recovers from errors |
+- **Complete data**: Live telemetry plus the on-device daily history in InfluxDB
+- **Harmless to the device**: Read-only toward the charger, it cannot change a setting
+- **Two ways in**: VE.Direct serial cable or Bluetooth Instant Readout, chosen by one config field
+- **Optional extra outputs**: VRM Portal upload alongside InfluxDB, no Venus OS
+- **Unattended operation**: Runs as a systemd service on a Raspberry Pi and recovers from errors
 
 Stakeholders: the owner running a camper or off-grid system (installs, reads Grafana), and
 contributors (see
@@ -65,28 +63,48 @@ flowchart LR
   classDef external fill:#999,stroke:#6b6b6b,color:#fff
 ```
 
-| Neighbour | Interface | Direction |
-| --- | --- | --- |
-| Charger | VE.Direct serial 19200 8N1 (text stream and HEX Get), or BLE Instant Readout adverts | in |
-| Smart Battery Sense | BLE Instant Readout adverts, own MAC and key | in |
-| InfluxDB v2 | InfluxDB client write API, token from the environment | out |
-| Grafana | reads InfluxDB, two dashboards ship in [`deploy/`](https://github.com/ckeller42/vedirect-influx/tree/main/deploy) | none directly |
-| VRM Portal | form-encoded HTTPS POST to `ccgxlogging.victronenergy.com`, see [VRM upload protocol](VRM.md) | out |
-| Venus components | VReg reads over a Unix socket, see [VictronConnect-Remote scope](vcr-component-assembly-scope.md) | in, dormant |
+- **Charger**
+  - Interface: VE.Direct serial 19200 8N1 (text stream and HEX Get), or BLE Instant Readout adverts
+  - Direction: in
+- **Smart Battery Sense**
+  - Interface: BLE Instant Readout adverts, own MAC and key
+  - Direction: in
+- **InfluxDB v2**
+  - Interface: InfluxDB client write API, token from the environment
+  - Direction: out
+- **Grafana**
+  - Interface: reads InfluxDB, two dashboards ship in [`deploy/`](https://github.com/ckeller42/vedirect-influx/tree/main/deploy)
+  - Direction: none directly
+- **VRM Portal**
+  - Interface: form-encoded HTTPS POST to `ccgxlogging.victronenergy.com`, see [VRM upload protocol](VRM.md)
+  - Direction: out
+- **Venus components**
+  - Interface: VReg reads over a Unix socket, see [VictronConnect-Remote scope](vcr-component-assembly-scope.md)
+  - Direction: in, dormant
 
 VictronConnect itself talks to the charger over its own Bluetooth link and is not part of this
 system.
 
 ## 4. Solution strategy
 
-| Problem | Approach | Where |
-| --- | --- | --- |
-| Two different input paths | A reader per source with the same output shape: a dict of named fields handed to a sink | `SerialReader`, `BleReader` |
-| Text and HEX share one port | One reader owns the port and takes a lock for each HEX exchange, so the text loop and on-demand reads interleave | `SerialReader._serial_lock` |
-| Several destinations that must not hurt each other | A `Sink` interface and a fan-out `MultiSink` that logs and swallows a failing sink | `sinks/` |
-| Decoding logic must be testable without hardware | Parsers are pure functions or classes over bytes, covered by doctests and fixtures | `text.py`, `protocol.py`, `history.py` |
-| Optional hardware libraries | Imported lazily, so serial-only installs need no BLE or D-Bus stack | `cli.py`, `pyproject.toml` extras |
-| History written repeatedly | History points are stamped at the day's midnight UTC, so a re-read overwrites | `sinks/influx.py` |
+- **Two different input paths**
+  - Approach: A reader per source with the same output shape: a dict of named fields handed to a sink
+  - Where: `SerialReader`, `BleReader`
+- **Text and HEX share one port**
+  - Approach: One reader owns the port and takes a lock for each HEX exchange, so the text loop and on-demand reads interleave
+  - Where: `SerialReader._serial_lock`
+- **Several destinations that must not hurt each other**
+  - Approach: A `Sink` interface and a fan-out `MultiSink` that logs and swallows a failing sink
+  - Where: `sinks/`
+- **Decoding logic must be testable without hardware**
+  - Approach: Parsers are pure functions or classes over bytes, covered by doctests and fixtures
+  - Where: `text.py`, `protocol.py`, `history.py`
+- **Optional hardware libraries**
+  - Approach: Imported lazily, so serial-only installs need no BLE or D-Bus stack
+  - Where: `cli.py`, `pyproject.toml` extras
+- **History written repeatedly**
+  - Approach: History points are stamped at the day's midnight UTC, so a re-read overwrites
+  - Where: `sinks/influx.py`
 
 ## 5. Building block view
 
@@ -145,24 +163,54 @@ flowchart TB
 
 ### Level 3: modules
 
-| Module | Role | Evidence |
-| --- | --- | --- |
-| [`cli.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/cli.py) | Entry point. Commands `run`, `history-once`, `vrm-register`. Builds sinks (`build_sinks`, `make_sink`) and the reader (`make_reader`); starts the IPC server for a serial source when enabled | `tests/test_cli_wiring.py` |
-| [`config.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/config.py) | `Config` dataclass and `Config.load` (YAML to fields). Reads key files lazily | `tests/test_cli_wiring.py` |
-| [`reader.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/reader.py) | `SerialReader`: opens the port, feeds text lines to the parser, throttles live samples, polls the 30 history registers at start and once per day, serves `vreg_get` | `tests/test_reader_vreg.py` |
-| [`ble.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/ble.py) | `BleReader`: one scanner, routes each advert by MAC to a field mapper (`solar_fields`, `battery_sense_fields`) and a sink writer | `tests/test_ble.py` |
-| [`text.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/text.py) | `TextFrameParser`: collects `label TAB value` lines until `Checksum`, scales to named fields | doctest in the module, `tests/test_text.py` |
-| [`protocol.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/protocol.py) | HEX framing: `build_get`, `parse_frame`, `checksum`. Get and Async only | doctests in the module |
-| [`history.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/history.py) | Register numbers (`0x1050 + days_ago`) and `decode_daily` to a `DailyRecord` | `tests/test_history.py` |
-| [`sinks/base.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/base.py) | `Sink` interface: `write_live`, `write_history_day`, optional `write_battery` and `close` | `tests/test_multisink.py` |
-| [`sinks/influx.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/influx.py) | `InfluxDBSink`: three measurements, tags, stable field types | `tests/test_influx.py` |
-| [`sinks/vrm.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/vrm.py) | `VrmSink`: field to VRM code map, one `CONFIGCHANGE`, `SENDDATA` per live sample | `tests/test_vrm_sink.py` |
-| [`sinks/stdout.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/stdout.py) | `StdoutSink`: prints records, for debugging | none |
-| [`sinks/multi.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/multi.py) | `MultiSink`: calls each sink, logs and swallows exceptions | `tests/test_multisink.py` |
-| [`vrm.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vrm.py) | `VrmClient` and `vrm_encode`: the `log.php` protocol, Portal ID, pinned CA | `tests/test_vrm.py` |
-| [`ipc.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/ipc.py) | `VregIpcServer` and `vreg_ipc_get`: line protocol `GET` over a Unix socket, `SET` rejected | `tests/test_ipc.py` |
-| [`vreglink.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vreglink.py) | Pure request logic: reads proxy to IPC, writes return status `0x8102` | `tests/test_vreglink.py` |
-| [`vreglink_service.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vreglink_service.py) | D-Bus `solarcharger` service with `VregLink`. Pi only, not run by CI | none (device only) |
+- **[`cli.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/cli.py)**
+  - Role: Entry point. Commands `run`, `history-once`, `vrm-register`. Builds sinks (`build_sinks`, `make_sink`) and the reader (`make_reader`); starts the IPC server for a serial source when enabled
+  - Evidence: `tests/test_cli_wiring.py`
+- **[`config.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/config.py)**
+  - Role: `Config` dataclass and `Config.load` (YAML to fields). Reads key files lazily
+  - Evidence: `tests/test_cli_wiring.py`
+- **[`reader.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/reader.py)**
+  - Role: `SerialReader`: opens the port, feeds text lines to the parser, throttles live samples, polls the 30 history registers at start and once per day, serves `vreg_get`
+  - Evidence: `tests/test_reader_vreg.py`
+- **[`ble.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/ble.py)**
+  - Role: `BleReader`: one scanner, routes each advert by MAC to a field mapper (`solar_fields`, `battery_sense_fields`) and a sink writer
+  - Evidence: `tests/test_ble.py`
+- **[`text.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/text.py)**
+  - Role: `TextFrameParser`: collects `label TAB value` lines until `Checksum`, scales to named fields
+  - Evidence: doctest in the module, `tests/test_text.py`
+- **[`protocol.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/protocol.py)**
+  - Role: HEX framing: `build_get`, `parse_frame`, `checksum`. Get and Async only
+  - Evidence: doctests in the module
+- **[`history.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/history.py)**
+  - Role: Register numbers (`0x1050 + days_ago`) and `decode_daily` to a `DailyRecord`
+  - Evidence: `tests/test_history.py`
+- **[`sinks/base.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/base.py)**
+  - Role: `Sink` interface: `write_live`, `write_history_day`, optional `write_battery` and `close`
+  - Evidence: `tests/test_multisink.py`
+- **[`sinks/influx.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/influx.py)**
+  - Role: `InfluxDBSink`: three measurements, tags, stable field types
+  - Evidence: `tests/test_influx.py`
+- **[`sinks/vrm.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/vrm.py)**
+  - Role: `VrmSink`: field to VRM code map, one `CONFIGCHANGE`, `SENDDATA` per live sample
+  - Evidence: `tests/test_vrm_sink.py`
+- **[`sinks/stdout.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/stdout.py)**
+  - Role: `StdoutSink`: prints records, for debugging
+  - Evidence: none
+- **[`sinks/multi.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/sinks/multi.py)**
+  - Role: `MultiSink`: calls each sink, logs and swallows exceptions
+  - Evidence: `tests/test_multisink.py`
+- **[`vrm.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vrm.py)**
+  - Role: `VrmClient` and `vrm_encode`: the `log.php` protocol, Portal ID, pinned CA
+  - Evidence: `tests/test_vrm.py`
+- **[`ipc.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/ipc.py)**
+  - Role: `VregIpcServer` and `vreg_ipc_get`: line protocol `GET` over a Unix socket, `SET` rejected
+  - Evidence: `tests/test_ipc.py`
+- **[`vreglink.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vreglink.py)**
+  - Role: Pure request logic: reads proxy to IPC, writes return status `0x8102`
+  - Evidence: `tests/test_vreglink.py`
+- **[`vreglink_service.py`](https://github.com/ckeller42/vedirect-influx/blob/main/vedirect_influx/vreglink_service.py)**
+  - Role: D-Bus `solarcharger` service with `VregLink`. Pi only, not run by CI
+  - Evidence: none (device only)
 
 ## 6. Runtime view
 
@@ -343,27 +391,51 @@ InfluxDB may also be remote: `sink.url` decides. The serial and Bluetooth paths 
 
 ## 9. Architecture decisions
 
-| Decision | Reason | Trace |
-| --- | --- | --- |
-| Read-only HEX | The tool must not be able to misconfigure the charger | `protocol.py` implements Get and Async only |
-| One reader owns the serial port, others go through IPC | The port has a single owner by nature | `ipc.py`, `reader.vreg_get` |
-| `Sink` interface with fan-out | Add destinations without touching the readers | PR #10 (VRM sink) |
-| VRM upload as a sink in the same process | Uses the same decoded frames, no Venus OS | PR #10 |
-| BLE as a second source with the same field names | Existing sinks and dashboards keep working | PR #17, PR #18 |
-| Smart Battery Sense in its own measurement with its own tags | The Sense must not be labelled as the charger | PR #23, PR #25 |
-| VictronConnect-Remote shelved | It needs genuine Venus OS, the flag was never flipped by any signal tried | [VictronConnect-Remote scope](vcr-component-assembly-scope.md), PR #15 |
-| Realtime VRM MQTT sink not merged | Only the HTTP upload is on `main` | branch `feat/vrm-realtime-mqtt` |
+- **Read-only HEX**
+  - Reason: The tool must not be able to misconfigure the charger
+  - Trace: `protocol.py` implements Get and Async only
+- **One reader owns the serial port, others go through IPC**
+  - Reason: The port has a single owner by nature
+  - Trace: `ipc.py`, `reader.vreg_get`
+- **`Sink` interface with fan-out**
+  - Reason: Add destinations without touching the readers
+  - Trace: PR #10 (VRM sink)
+- **VRM upload as a sink in the same process**
+  - Reason: Uses the same decoded frames, no Venus OS
+  - Trace: PR #10
+- **BLE as a second source with the same field names**
+  - Reason: Existing sinks and dashboards keep working
+  - Trace: PR #17, PR #18
+- **Smart Battery Sense in its own measurement with its own tags**
+  - Reason: The Sense must not be labelled as the charger
+  - Trace: PR #23, PR #25
+- **VictronConnect-Remote shelved**
+  - Reason: It needs genuine Venus OS, the flag was never flipped by any signal tried
+  - Trace: [VictronConnect-Remote scope](vcr-component-assembly-scope.md), PR #15
+- **Realtime VRM MQTT sink not merged**
+  - Reason: Only the HTTP upload is on `main`
+  - Trace: branch `feat/vrm-realtime-mqtt`
 
 ## 10. Quality requirements
 
-| Quality | Scenario | How it is met |
-| --- | --- | --- |
-| Safety | A bug or bad config cannot change a charger setting | No write command exists in `protocol.py`; the IPC rejects `SET` (`tests/test_ipc.py`) |
-| Fault isolation | VRM is unreachable | `MultiSink` swallows the error, InfluxDB writes continue (`tests/test_multisink.py`) |
-| Availability | Cable pulled or adapter error | The reader reopens the port every 10 seconds |
-| Data integrity | The service restarts, history is read again | Points at midnight UTC overwrite, no duplicates |
-| Compatibility | A dashboard queries a field | Names and types are the [data contract](reference/data-contract.md) |
-| Maintainability | A parser changes | Doctests calibrated on captured frames (`history.py`, `text.py`) |
+- **Safety**
+  - Scenario: A bug or bad config cannot change a charger setting
+  - How it is met: No write command exists in `protocol.py`; the IPC rejects `SET` (`tests/test_ipc.py`)
+- **Fault isolation**
+  - Scenario: VRM is unreachable
+  - How it is met: `MultiSink` swallows the error, InfluxDB writes continue (`tests/test_multisink.py`)
+- **Availability**
+  - Scenario: Cable pulled or adapter error
+  - How it is met: The reader reopens the port every 10 seconds
+- **Data integrity**
+  - Scenario: The service restarts, history is read again
+  - How it is met: Points at midnight UTC overwrite, no duplicates
+- **Compatibility**
+  - Scenario: A dashboard queries a field
+  - How it is met: Names and types are the [data contract](reference/data-contract.md)
+- **Maintainability**
+  - Scenario: A parser changes
+  - How it is met: Doctests calibrated on captured frames (`history.py`, `text.py`)
 
 ## 11. Risks and technical debt
 
@@ -379,16 +451,4 @@ InfluxDB may also be remote: `sink.url` decides. The serial and Bluetooth paths 
 
 ## 12. Glossary
 
-| Term | Meaning |
-| --- | --- |
-| VE.Direct | Victron's serial interface: a text stream plus the HEX command protocol |
-| HEX protocol | Request and response frames starting with a colon; here only Get is used |
-| Register | A numbered value in the charger; the daily history is `0x1050` to `0x106D` |
-| Instant Readout | Victron's encrypted Bluetooth advertisement with live values |
-| Smart Battery Sense | Victron BLE battery temperature and voltage sensor |
-| VRM | Victron Remote Management, the web portal and app |
-| Portal ID | The VRM installation identifier, here the ethernet MAC without colons |
-| GX device | Victron's controller (Cerbo, Venus OS). The VRM sink presents as one |
-| VictronConnect-Remote | Configuring a charger through VRM, needs genuine Venus OS |
-| VReg, VregLink | Victron register access, and its D-Bus interface used by VictronConnect-Remote |
-| Sink | A destination for decoded data, see `Sink` |
+Terms are defined in the [glossary](reference/glossary.md).

@@ -26,6 +26,7 @@ the charger: it never writes a setting.
    reference/configuration
    reference/cli
    reference/data-contract
+   reference/glossary
    VRM
    reference/api
 
